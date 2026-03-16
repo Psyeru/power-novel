@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML 화면 정의서 프로그램 (다중 페이지 지원)</title>
+<style>
+    /* =========================================================
+       전체 프로그램 레이아웃 및 디자인
+    ========================================================= */
+    body { display: flex; flex-direction: column; height: 100vh; margin: 0; font-family: 'Noto Sans KR', sans-serif; background: #e9ecef; overflow: hidden; }
+    
+    /* 상단 에디터 툴바 & 탭 */
+    .editor-toolbar { background: #111; color: white; display: flex; flex-direction: column; z-index: 10000; }
+    .toolbar-top { display: flex; padding: 10px 20px; align-items: center; gap: 10px; border-bottom: 1px solid #333; }
+    .toolbar-bottom { display: flex; padding: 0 20px; background: #1a1a1a; overflow-x: auto; }
+    
+    button { padding: 8px 16px; font-size: 13px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+    .btn-capture { background: #10b981; color: white; }
+    .btn-capture:hover { background: #059669; }
+    .btn-export { background: #4f46e5; color: white; margin-left: auto; }
+    .btn-export:hover { background: #3730a3; }
+    .btn-add-box { background: #d93025; color: white; display: none; }
+    .btn-add-box.show { display: block; }
+    
+    .status-text { font-size: 13px; color: #aaa; margin-left: 10px; }
+
+    /* 페이지 탭 디자인 */
+    .tab { padding: 12px 20px; color: #888; cursor: pointer; border-bottom: 3px solid transparent; font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .tab:hover { color: #ddd; }
+    .tab.active { color: #fff; border-bottom-color: #4f46e5; background: #222; }
+    .tab-live { color: #10b981; }
+    .tab-live.active { border-bottom-color: #10b981; }
+
+    /* 메인 워크스페이스 */
+    .main-wrap { display: flex; flex: 1; overflow: hidden; }
+    
+    /* 좌측: 스마트폰 목업 영역 */
+    .left-pane { flex: 5; display: flex; justify-content: center; align-items: center; background: #2c2f33; position: relative; padding: 20px; overflow-y: auto; }
+    #app-mockup { width: 480px; height: 800px; background: #f4f4f6; overflow-y: auto; overflow-x: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 10px; }
+    
+    /* 뷰 컨트롤 (라이브 vs 스냅샷) */
+    #live-view { width: 100%; min-height: 100%; position: relative; }
+    #scene-view { width: 100%; min-height: 100%; position: relative; display: none; pointer-events: none; } /* 박제된 화면은 클릭 안 됨 */
+    #scene-interaction-layer { position: absolute; inset: 0; z-index: 9998; display: none; } /* 빨간 박스 그리는 투명 레이어 */
+    
+    /* 요소 선택 모드 */
+    .select-mode-active #scene-interaction-layer { cursor: crosshair; display: block; }
+    
+    /* 우측: 기획서 표 영역 */
+    .right-pane { flex: 5; background: #fff; border-left: 1px solid #ddd; display: flex; flex-direction: column; overflow-y: auto; }
+    .guide-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; text-align: center; line-height: 1.6; }
+    #spec-editor-wrap { display: none; flex-direction: column; }
+    
+    .spec-header { background: #f8f9fa; font-weight: 900; padding: 15px 20px; font-size: 18px; border-bottom: 2px solid #222; color: #111; display: flex; justify-content: space-between; align-items: center;}
+    .spec-header input { font-size: 18px; font-weight: 900; border: none; background: transparent; width: 300px; border-bottom: 1px dashed #ccc; padding: 2px; outline: none; }
+    
+    .spec-table { width: 100%; border-collapse: collapse; }
+    .spec-table th, .spec-table td { border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; padding: 14px; font-size: 13px; text-align: left; vertical-align: top; line-height: 1.5; color: #333; }
+    .spec-table th { background: #f4f4f6; width: 60px; text-align: center; font-weight: 700; color: #555; }
+    .spec-title-row th, .spec-title-row td { background: #fff4f4; border-top: 2px solid #d93025; border-bottom: 1px solid #d93025; }
+    .spec-title-row td { font-weight: 800; color: #d93025; font-size: 14px; }
+    
+    /* 빨간 박스 & 뱃지 */
+    .red-box { position: absolute; border: 3px solid #d93025; z-index: 9999; background: rgba(217, 48, 37, 0.05); pointer-events: none; }
+    .red-badge { position: absolute; top: -15px; left: -15px; background: #d93025; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+    .badge-inline { display: inline-block; background: #d93025; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 11px; margin-right: 6px; vertical-align: middle; }
+
+    /* 수정 가능한 텍스트 영역 */
+    [contenteditable="true"] { outline: none; transition: background 0.2s; padding: 4px; border-radius: 4px; }
+    [contenteditable="true"]:hover { background: rgba(0,0,0,0.05); cursor: text; }
+    [contenteditable="true"]:focus { background: #fffde7; outline: 1px dashed #ccc; }
+</style>
+</head>
+<body>
+
+<div class="editor-toolbar" id="no-export-toolbar">
+    <div class="toolbar-top">
+        <button class="btn-capture" id="capture-btn">📸 현재 화면을 새 기획 페이지로 저장</button>
+        <button class="btn-add-box" id="add-box-btn">➕ 빨간 박스 찍기</button>
+        <div class="status-text" id="status-text">← 라이브 모드입니다. 화면을 조작한 뒤 캡처 버튼을 누르세요.</div>
+        <button class="btn-export" id="export-btn">💾 HTML 최종본 다운로드</button>
+    </div>
+    <div class="toolbar-bottom" id="tab-container">
+        <div class="tab tab-live active" id="tab-live" onclick="switchToLive()">🟢 라이브 조작 모드</div>
+        </div>
+</div>
+
+<div class="main-wrap">
+    <div class="left-pane">
+        <div id="app-mockup">
+            
+            <div id="scene-view"></div>
+            <div id="scene-interaction-layer"></div>
+            
+            <div id="live-view">
+</div>
+
+        </div>
+    </div>
+
+    <div class="right-pane">
+        <div class="guide-screen" id="guide-screen">
+            <h3>🟢 라이브 조작 모드 작동 중</h3>
+            <p>좌측 화면을 클릭하여 원하는 메뉴나 모달창을 여세요.<br>원하는 장면이 나오면 상단의 <b>[📸 캡처]</b> 버튼을 누르세요.</p>
+        </div>
+        
+        <div id="spec-editor-wrap">
+            <div class="spec-header">
+                <input type="text" id="scene-title-input" value="기획서 페이지 제목">
+                <span style="font-size:12px; color:#aaa; font-weight:normal;">(제목 수정 가능)</span>
+            </div>
+            <table class="spec-table" id="spec-table-body">
+                </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // =========================================================
+    // 프로그램 구동 엔진 (자바스크립트)
+    // =========================================================
+    let scenes = {}; // 생성된 페이지(장면) 데이터를 저장하는 객체
+    let currentSceneId = null;
+    let isSelecting = false;
+    let sceneCounter = 1;
+
+    const liveView = document.getElementById('live-view');
+    const sceneView = document.getElementById('scene-view');
+    const interactionLayer = document.getElementById('scene-interaction-layer');
+    const mockup = document.getElementById('app-mockup');
+    
+    const guideScreen = document.getElementById('guide-screen');
+    const specEditorWrap = document.getElementById('spec-editor-wrap');
+    const tableBody = document.getElementById('spec-table-body');
+    const sceneTitleInput = document.getElementById('scene-title-input');
+    
+    const btnCapture = document.getElementById('capture-btn');
+    const btnAddBox = document.getElementById('add-box-btn');
+    const statusText = document.getElementById('status-text');
+    const tabContainer = document.getElementById('tab-container');
+
+    // 1. 현재 화면 캡처 및 새 페이지 생성
+    btnCapture.addEventListener('click', () => {
+        // 인풋, 텍스트에어리어 등의 value를 HTML 속성으로 고정 (스냅샷 보존용)
+        const inputs = liveView.querySelectorAll('input, textarea');
+        inputs.forEach(input => { input.setAttribute('value', input.value); });
+
+        const sceneId = 'scene_' + Date.now();
+        const htmlSnapshot = liveView.innerHTML; // 현재 상태 박제
+        
+        scenes[sceneId] = {
+            id: sceneId,
+            title: `페이지 ${sceneCounter}`,
+            html: htmlSnapshot,
+            boxesHtml: '', // 그려진 빨간 박스들 저장
+            tableHtml: ''  // 작성된 표 내용 저장
+        };
+        
+        // 새 탭 만들기
+        const newTab = document.createElement('div');
+        newTab.className = 'tab';
+        newTab.innerText = `📄 페이지 ${sceneCounter}`;
+        newTab.id = `tab-${sceneId}`;
+        newTab.onclick = () => switchToScene(sceneId);
+        tabContainer.appendChild(newTab);
+        
+        sceneCounter++;
+        switchToScene(sceneId); // 방금 만든 페이지로 이동
+    });
+
+    // 2. 제목 수정 시 탭 이름 동기화
+    sceneTitleInput.addEventListener('input', (e) => {
+        if(!currentSceneId) return;
+        scenes[currentSceneId].title = e.target.value;
+        document.getElementById(`tab-${currentSceneId}`).innerText = `📄 ` + e.target.value;
+    });
+
+    // 3. 우측 표 편집 시 데이터 임시 저장
+    tableBody.addEventListener('input', () => {
+        if(currentSceneId) scenes[currentSceneId].tableHtml = tableBody.innerHTML;
+    });
+
+    // 4. 라이브 조작 모드로 돌아가기
+    window.switchToLive = function() {
+        saveCurrentSceneState();
+        currentSceneId = null;
+        
+        // 탭 UI 변경
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-live').classList.add('active');
+        
+        // 화면 전환
+        sceneView.style.display = 'none';
+        interactionLayer.style.display = 'none';
+        liveView.style.display = 'block';
+        
+        // 우측 패널 전환
+        specEditorWrap.style.display = 'none';
+        guideScreen.style.display = 'flex';
+        
+        // 버튼 & 텍스트 전환
+        btnCapture.style.display = 'block';
+        btnAddBox.classList.remove('show');
+        statusText.innerText = '← 라이브 모드입니다. 화면을 조작한 뒤 캡처 버튼을 누르세요.';
+    }
+
+    // 5. 생성된 기획서 페이지(Scene) 열기
+    window.switchToScene = function(sceneId) {
+        saveCurrentSceneState();
+        currentSceneId = sceneId;
+        const sceneData = scenes[sceneId];
+        
+        // 탭 UI 변경
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(`tab-${sceneId}`).classList.add('active');
+        
+        // 화면 전환: 라이브 숨기고 박제된 HTML 띄우기
+        liveView.style.display = 'none';
+        sceneView.style.display = 'block';
+        sceneView.innerHTML = sceneData.html; // 박제된 화면 로드
+        
+        // 기존에 그렸던 빨간 박스 레이어 로드
+        interactionLayer.innerHTML = sceneData.boxesHtml;
+        interactionLayer.style.display = 'block';
+        
+        // 우측 패널 전환
+        guideScreen.style.display = 'none';
+        specEditorWrap.style.display = 'flex';
+        sceneTitleInput.value = sceneData.title;
+        tableBody.innerHTML = sceneData.tableHtml;
+        
+        // 버튼 & 텍스트 전환
+        btnCapture.style.display = 'none';
+        btnAddBox.classList.add('show');
+        statusText.innerText = '위 버튼을 눌러 빨간 박스를 추가하고 설명을 적으세요.';
+    }
+
+    // 다른 탭 이동 전 현재 상태 저장
+    function saveCurrentSceneState() {
+        if (currentSceneId && scenes[currentSceneId]) {
+            scenes[currentSceneId].boxesHtml = interactionLayer.innerHTML;
+            scenes[currentSceneId].tableHtml = tableBody.innerHTML;
+        }
+    }
+
+    // 6. 빨간 박스 그리기 모드
+    btnAddBox.addEventListener('click', () => {
+        if(!currentSceneId) return;
+        isSelecting = true;
+        mockup.classList.add('select-mode-active');
+        statusText.innerText = '👉 좌측 멈춰진 화면에서 설명할 위치를 마우스로 클릭하세요!';
+        statusText.style.color = '#ff8a80';
+    });
+
+    interactionLayer.addEventListener('click', (e) => {
+        if (!isSelecting) return;
+        
+        mockup.classList.remove('select-mode-active');
+        isSelecting = false;
+        statusText.innerText = '위 버튼을 눌러 빨간 박스를 추가하고 설명을 적으세요.';
+        statusText.style.color = '#aaa';
+
+        // 몇 번째 박스인지 계산
+        const boxCount = interactionLayer.querySelectorAll('.red-box').length + 1;
+
+        // 클릭한 위치에 박스 생성 (임의 크기로 생성 후 사용자가 글 작성)
+        const rect = mockup.getBoundingClientRect();
+        const top = e.clientY - rect.top + mockup.scrollTop - 20; // 클릭 좌표 보정
+        const left = e.clientX - rect.left + mockup.scrollLeft - 50;
+        
+        const box = document.createElement('div');
+        box.className = 'red-box';
+        box.style.top = top + 'px';
+        box.style.left = left + 'px';
+        box.style.width = '100px';
+        box.style.height = '40px';
+        box.innerHTML = `<div class="red-badge">${boxCount}</div>`;
+        interactionLayer.appendChild(box);
+
+        // 우측 표에 새 행 추가
+        const tr = document.createElement('tbody');
+        tr.innerHTML = `
+            <tr class="spec-title-row">
+                <th>정의</th>
+                <td colspan="2"><span class="badge-inline">${boxCount}</span><span contenteditable="true" style="border-bottom:1px dashed #d93025; font-weight:800;">여기를 클릭해서 기능 제목을 적으세요</span></td>
+            </tr>
+            <tr>
+                <th>01</th>
+                <td colspan="2"><div contenteditable="true" style="min-height:20px;">상세 기능 설명을 적으세요. (엔터 시 줄바꿈)</div></td>
+            </tr>
+            <tr>
+                <th>비고</th>
+                <td colspan="2"><div contenteditable="true" style="min-height:20px;">비고사항 (필요 없으면 비워두세요)</div></td>
+            </tr>
+        `;
+        tableBody.appendChild(tr);
+        saveCurrentSceneState(); // 즉시 저장
+    });
+
+    // 7. 최종 결과물 다운로드
+    document.getElementById('export-btn').addEventListener('click', () => {
+        saveCurrentSceneState(); // 현재 탭 내용 저장
+        switchToLive(); // 다운로드 전 화면을 안전하게 초기화
+        
+        const toolbar = document.getElementById('no-export-toolbar');
+        toolbar.style.display = 'none';
+        
+        const htmlContent = document.documentElement.outerHTML;
+        toolbar.style.display = 'flex';
+
+        const blob = new Blob(['<!DOCTYPE html>\n' + htmlContent], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = '노벨피아_다중페이지_기획서.html';
+        a.click();
+    });
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HTML 화면 정의서 프로그램 (업로드 지원)</title>
+<title>HTML 화면 정의서 프로그램 (완벽 구동판)</title>
 <style>
     /* =========================================================
        전체 프로그램 레이아웃 및 디자인
@@ -37,7 +37,7 @@
     
     /* 좌측: 스마트폰 목업 영역 */
     .left-pane { flex: 5; display: flex; justify-content: center; align-items: center; background: #2c2f33; position: relative; padding: 20px; overflow-y: auto; }
-    #app-mockup { width: 480px; height: 800px; background: #f4f4f6; overflow-y: auto; overflow-x: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 10px; }
+    #app-mockup { width: 480px; height: 800px; background: #fff; overflow: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 10px; }
     
     /* 초기 HTML 입력 화면 */
     #html-loader-ui { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 30px; background: #fff; text-align: center; box-sizing: border-box; }
@@ -45,9 +45,9 @@
     #html-loader-ui textarea { width: 100%; height: 250px; margin: 15px 0; padding: 10px; border: 1px solid #ccc; border-radius: 6px; resize: none; font-family: monospace; font-size: 12px; }
     .file-upload-wrapper { width: 100%; padding: 20px; border: 2px dashed #4f46e5; border-radius: 8px; margin-bottom: 15px; background: #f5f5ff; }
 
-    /* 뷰 컨트롤 (라이브 vs 스냅샷) */
-    #live-view { width: 100%; min-height: 100%; position: relative; display: none; }
-    #scene-view { width: 100%; min-height: 100%; position: relative; display: none; pointer-events: none; }
+    /* 가상 브라우저(Iframe) 뷰 엔진 */
+    #live-iframe { width: 100%; height: 100%; border: none; display: none; background: #fff; }
+    #scene-iframe { width: 100%; height: 100%; border: none; display: none; background: #fff; pointer-events: none; }
     #scene-interaction-layer { position: absolute; inset: 0; z-index: 9998; display: none; }
     
     /* 요소 선택 모드 */
@@ -105,15 +105,14 @@
                 </div>
                 
                 <div style="font-size:14px; color:#888;">또는 아래에 코드를 직접 붙여넣으세요</div>
-                <textarea id="html-textarea" placeholder="여기에 5000줄 코드를 붙여넣으세요..."></textarea>
+                <textarea id="html-textarea" placeholder="여기에 HTML 코드를 통째로 붙여넣으세요..."></textarea>
                 
                 <button id="load-html-btn" style="padding:12px 24px; background:#4f46e5; color:#fff; font-size:15px; width:100%;">🚀 화면 렌더링 시작</button>
             </div>
 
-            <div id="scene-view"></div>
+            <iframe id="live-iframe"></iframe>
+            <iframe id="scene-iframe"></iframe>
             <div id="scene-interaction-layer"></div>
-            
-            <div id="live-view"></div>
 
         </div>
     </div>
@@ -137,7 +136,7 @@
 
 <script>
     // =========================================================
-    // 프로그램 구동 엔진 (자바스크립트)
+    // 가상 브라우저(Iframe) 구동 엔진
     // =========================================================
     let scenes = {};
     let currentSceneId = null;
@@ -145,8 +144,8 @@
     let sceneCounter = 1;
 
     const loaderUi = document.getElementById('html-loader-ui');
-    const liveView = document.getElementById('live-view');
-    const sceneView = document.getElementById('scene-view');
+    const liveIframe = document.getElementById('live-iframe');
+    const sceneIframe = document.getElementById('scene-iframe');
     const interactionLayer = document.getElementById('scene-interaction-layer');
     const mockup = document.getElementById('app-mockup');
     
@@ -162,7 +161,7 @@
     const tabContainer = document.getElementById('tab-container');
     const tabLive = document.getElementById('tab-live');
 
-    // 0. 파일 업로드 및 코드 로드 기능
+    // 0. 파일 업로드 및 코드 로드 (Iframe에 직접 주입)
     document.getElementById('file-upload').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if(!file) return;
@@ -180,12 +179,12 @@
             return;
         }
         
-        // 렌더링 및 UI 전환
-        liveView.innerHTML = code;
-        loaderUi.style.display = 'none';
-        liveView.style.display = 'block';
+        // 핵심: Iframe의 srcdoc 속성을 사용해 완벽한 가상 브라우저 환경 제공
+        liveIframe.srcdoc = code;
         
-        // 상단 툴바 활성화
+        loaderUi.style.display = 'none';
+        liveIframe.style.display = 'block';
+        
         btnCapture.style.display = 'block';
         btnExport.style.display = 'block';
         tabLive.style.display = 'block';
@@ -194,14 +193,18 @@
         statusText.innerText = '← 라이브 모드입니다. 화면을 조작한 뒤 캡처 버튼을 누르세요.';
     });
 
-    // 1. 현재 화면 캡처 및 새 페이지 생성
+    // 1. 현재 화면 캡처 및 새 페이지 생성 (동적 상태 보존)
     btnCapture.addEventListener('click', () => {
-        // 인풋, 텍스트에어리어 등의 value를 HTML 속성으로 고정
-        const inputs = liveView.querySelectorAll('input, textarea');
-        inputs.forEach(input => { input.setAttribute('value', input.value || ''); });
-
         const sceneId = 'scene_' + Date.now();
-        const htmlSnapshot = liveView.innerHTML;
+        let htmlSnapshot = '';
+        
+        // Iframe 내부의 변화된 상태(모달 열림 등)를 통째로 가져옴
+        try {
+            htmlSnapshot = liveIframe.contentDocument.documentElement.outerHTML;
+        } catch(e) {
+            // 보안 정책으로 막힐 경우 원본 코드로 대체
+            htmlSnapshot = liveIframe.srcdoc;
+        }
         
         scenes[sceneId] = {
             id: sceneId,
@@ -222,30 +225,30 @@
         switchToScene(sceneId);
     });
 
-    // 2. 제목 수정 시 탭 이름 동기화
+    // 2. 제목 수정
     sceneTitleInput.addEventListener('input', (e) => {
         if(!currentSceneId) return;
         scenes[currentSceneId].title = e.target.value;
         document.getElementById(`tab-${currentSceneId}`).innerText = `📄 ` + e.target.value;
     });
 
-    // 3. 우측 표 편집 시 데이터 임시 저장
+    // 3. 우측 표 편집 시 저장
     tableBody.addEventListener('input', () => {
         if(currentSceneId) scenes[currentSceneId].tableHtml = tableBody.innerHTML;
     });
 
-    // 4. 라이브 조작 모드로 돌아가기
+    // 4. 라이브 모드 전환
     window.switchToLive = function() {
-        if (!liveView.innerHTML.trim()) return; // 로드 전 방지
+        if (loaderUi.style.display !== 'none') return;
         saveCurrentSceneState();
         currentSceneId = null;
         
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         tabLive.classList.add('active');
         
-        sceneView.style.display = 'none';
+        sceneIframe.style.display = 'none';
         interactionLayer.style.display = 'none';
-        liveView.style.display = 'block';
+        liveIframe.style.display = 'block';
         
         specEditorWrap.style.display = 'none';
         guideScreen.style.display = 'flex';
@@ -255,7 +258,7 @@
         statusText.innerText = '← 라이브 모드입니다. 화면을 조작한 뒤 캡처 버튼을 누르세요.';
     }
 
-    // 5. 생성된 기획서 페이지(Scene) 열기
+    // 5. 기획서 페이지 전환
     window.switchToScene = function(sceneId) {
         saveCurrentSceneState();
         currentSceneId = sceneId;
@@ -264,9 +267,9 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(`tab-${sceneId}`).classList.add('active');
         
-        liveView.style.display = 'none';
-        sceneView.style.display = 'block';
-        sceneView.innerHTML = sceneData.html;
+        liveIframe.style.display = 'none';
+        sceneIframe.srcdoc = sceneData.html; // 박제된 HTML 로드
+        sceneIframe.style.display = 'block';
         
         interactionLayer.innerHTML = sceneData.boxesHtml;
         interactionLayer.style.display = 'block';
@@ -288,7 +291,7 @@
         }
     }
 
-    // 6. 빨간 박스 그리기 모드
+    // 6. 빨간 박스 그리기
     btnAddBox.addEventListener('click', () => {
         if(!currentSceneId) return;
         isSelecting = true;
@@ -339,10 +342,14 @@
         saveCurrentSceneState();
     });
 
-    // 7. 최종 결과물 다운로드
+    // 7. 최종 결과물 다운로드 (Iframe 속성 고정 처리)
     btnExport.addEventListener('click', () => {
         saveCurrentSceneState();
         switchToLive();
+        
+        // 다운로드용 HTML에 Iframe srcdoc 속성을 명시적으로 박아넣음
+        liveIframe.setAttribute('srcdoc', liveIframe.srcdoc);
+        sceneIframe.setAttribute('srcdoc', sceneIframe.srcdoc);
         
         const toolbar = document.getElementById('no-export-toolbar');
         toolbar.style.display = 'none';

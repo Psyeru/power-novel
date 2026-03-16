@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HTML 화면 정의서 프로그램 (다중 페이지 지원)</title>
+<title>HTML 화면 정의서 프로그램 (업로드 지원)</title>
 <style>
     /* =========================================================
        전체 프로그램 레이아웃 및 디자인
@@ -39,10 +39,16 @@
     .left-pane { flex: 5; display: flex; justify-content: center; align-items: center; background: #2c2f33; position: relative; padding: 20px; overflow-y: auto; }
     #app-mockup { width: 480px; height: 800px; background: #f4f4f6; overflow-y: auto; overflow-x: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 10px; }
     
+    /* 초기 HTML 입력 화면 */
+    #html-loader-ui { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 30px; background: #fff; text-align: center; box-sizing: border-box; }
+    #html-loader-ui h3 { margin-top: 0; color: #333; }
+    #html-loader-ui textarea { width: 100%; height: 250px; margin: 15px 0; padding: 10px; border: 1px solid #ccc; border-radius: 6px; resize: none; font-family: monospace; font-size: 12px; }
+    .file-upload-wrapper { width: 100%; padding: 20px; border: 2px dashed #4f46e5; border-radius: 8px; margin-bottom: 15px; background: #f5f5ff; }
+
     /* 뷰 컨트롤 (라이브 vs 스냅샷) */
-    #live-view { width: 100%; min-height: 100%; position: relative; }
-    #scene-view { width: 100%; min-height: 100%; position: relative; display: none; pointer-events: none; } /* 박제된 화면은 클릭 안 됨 */
-    #scene-interaction-layer { position: absolute; inset: 0; z-index: 9998; display: none; } /* 빨간 박스 그리는 투명 레이어 */
+    #live-view { width: 100%; min-height: 100%; position: relative; display: none; }
+    #scene-view { width: 100%; min-height: 100%; position: relative; display: none; pointer-events: none; }
+    #scene-interaction-layer { position: absolute; inset: 0; z-index: 9998; display: none; }
     
     /* 요소 선택 모드 */
     .select-mode-active #scene-interaction-layer { cursor: crosshair; display: block; }
@@ -76,33 +82,46 @@
 
 <div class="editor-toolbar" id="no-export-toolbar">
     <div class="toolbar-top">
-        <button class="btn-capture" id="capture-btn">📸 현재 화면을 새 기획 페이지로 저장</button>
+        <button class="btn-capture" id="capture-btn" style="display:none;">📸 현재 화면을 새 기획 페이지로 저장</button>
         <button class="btn-add-box" id="add-box-btn">➕ 빨간 박스 찍기</button>
-        <div class="status-text" id="status-text">← 라이브 모드입니다. 화면을 조작한 뒤 캡처 버튼을 누르세요.</div>
-        <button class="btn-export" id="export-btn">💾 HTML 최종본 다운로드</button>
+        <div class="status-text" id="status-text">← 먼저 기획할 HTML 파일이나 코드를 로드해주세요.</div>
+        <button class="btn-export" id="export-btn" style="display:none;">💾 HTML 최종본 다운로드</button>
     </div>
     <div class="toolbar-bottom" id="tab-container">
-        <div class="tab tab-live active" id="tab-live" onclick="switchToLive()">🟢 라이브 조작 모드</div>
-        </div>
+        <div class="tab tab-live active" id="tab-live" onclick="switchToLive()" style="display:none;">🟢 라이브 조작 모드</div>
+    </div>
 </div>
 
 <div class="main-wrap">
     <div class="left-pane">
         <div id="app-mockup">
             
+            <div id="html-loader-ui">
+                <h3>기획할 HTML 화면 불러오기</h3>
+                
+                <div class="file-upload-wrapper">
+                    <label style="font-weight:bold; color:#4f46e5;">📁 HTML 파일 선택:</label><br><br>
+                    <input type="file" id="file-upload" accept=".html,.txt">
+                </div>
+                
+                <div style="font-size:14px; color:#888;">또는 아래에 코드를 직접 붙여넣으세요</div>
+                <textarea id="html-textarea" placeholder="여기에 5000줄 코드를 붙여넣으세요..."></textarea>
+                
+                <button id="load-html-btn" style="padding:12px 24px; background:#4f46e5; color:#fff; font-size:15px; width:100%;">🚀 화면 렌더링 시작</button>
+            </div>
+
             <div id="scene-view"></div>
             <div id="scene-interaction-layer"></div>
             
-            <div id="live-view">
-</div>
+            <div id="live-view"></div>
 
         </div>
     </div>
 
     <div class="right-pane">
         <div class="guide-screen" id="guide-screen">
-            <h3>🟢 라이브 조작 모드 작동 중</h3>
-            <p>좌측 화면을 클릭하여 원하는 메뉴나 모달창을 여세요.<br>원하는 장면이 나오면 상단의 <b>[📸 캡처]</b> 버튼을 누르세요.</p>
+            <h3>대기 중</h3>
+            <p>좌측에서 HTML 코드를 불러오면 기획을 시작할 수 있습니다.</p>
         </div>
         
         <div id="spec-editor-wrap">
@@ -120,11 +139,12 @@
     // =========================================================
     // 프로그램 구동 엔진 (자바스크립트)
     // =========================================================
-    let scenes = {}; // 생성된 페이지(장면) 데이터를 저장하는 객체
+    let scenes = {};
     let currentSceneId = null;
     let isSelecting = false;
     let sceneCounter = 1;
 
+    const loaderUi = document.getElementById('html-loader-ui');
     const liveView = document.getElementById('live-view');
     const sceneView = document.getElementById('scene-view');
     const interactionLayer = document.getElementById('scene-interaction-layer');
@@ -137,27 +157,60 @@
     
     const btnCapture = document.getElementById('capture-btn');
     const btnAddBox = document.getElementById('add-box-btn');
+    const btnExport = document.getElementById('export-btn');
     const statusText = document.getElementById('status-text');
     const tabContainer = document.getElementById('tab-container');
+    const tabLive = document.getElementById('tab-live');
+
+    // 0. 파일 업로드 및 코드 로드 기능
+    document.getElementById('file-upload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            document.getElementById('html-textarea').value = evt.target.result;
+        };
+        reader.readAsText(file);
+    });
+
+    document.getElementById('load-html-btn').addEventListener('click', () => {
+        const code = document.getElementById('html-textarea').value;
+        if(code.trim() === '') {
+            alert('HTML 코드를 붙여넣거나 파일을 업로드해주세요.');
+            return;
+        }
+        
+        // 렌더링 및 UI 전환
+        liveView.innerHTML = code;
+        loaderUi.style.display = 'none';
+        liveView.style.display = 'block';
+        
+        // 상단 툴바 활성화
+        btnCapture.style.display = 'block';
+        btnExport.style.display = 'block';
+        tabLive.style.display = 'block';
+        
+        guideScreen.innerHTML = '<h3>🟢 라이브 조작 모드 작동 중</h3><p>좌측 화면을 클릭하여 원하는 메뉴나 모달창을 여세요.<br>원하는 장면이 나오면 상단의 <b>[📸 캡처]</b> 버튼을 누르세요.</p>';
+        statusText.innerText = '← 라이브 모드입니다. 화면을 조작한 뒤 캡처 버튼을 누르세요.';
+    });
 
     // 1. 현재 화면 캡처 및 새 페이지 생성
     btnCapture.addEventListener('click', () => {
-        // 인풋, 텍스트에어리어 등의 value를 HTML 속성으로 고정 (스냅샷 보존용)
+        // 인풋, 텍스트에어리어 등의 value를 HTML 속성으로 고정
         const inputs = liveView.querySelectorAll('input, textarea');
-        inputs.forEach(input => { input.setAttribute('value', input.value); });
+        inputs.forEach(input => { input.setAttribute('value', input.value || ''); });
 
         const sceneId = 'scene_' + Date.now();
-        const htmlSnapshot = liveView.innerHTML; // 현재 상태 박제
+        const htmlSnapshot = liveView.innerHTML;
         
         scenes[sceneId] = {
             id: sceneId,
             title: `페이지 ${sceneCounter}`,
             html: htmlSnapshot,
-            boxesHtml: '', // 그려진 빨간 박스들 저장
-            tableHtml: ''  // 작성된 표 내용 저장
+            boxesHtml: '',
+            tableHtml: ''
         };
         
-        // 새 탭 만들기
         const newTab = document.createElement('div');
         newTab.className = 'tab';
         newTab.innerText = `📄 페이지 ${sceneCounter}`;
@@ -166,7 +219,7 @@
         tabContainer.appendChild(newTab);
         
         sceneCounter++;
-        switchToScene(sceneId); // 방금 만든 페이지로 이동
+        switchToScene(sceneId);
     });
 
     // 2. 제목 수정 시 탭 이름 동기화
@@ -183,23 +236,20 @@
 
     // 4. 라이브 조작 모드로 돌아가기
     window.switchToLive = function() {
+        if (!liveView.innerHTML.trim()) return; // 로드 전 방지
         saveCurrentSceneState();
         currentSceneId = null;
         
-        // 탭 UI 변경
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById('tab-live').classList.add('active');
+        tabLive.classList.add('active');
         
-        // 화면 전환
         sceneView.style.display = 'none';
         interactionLayer.style.display = 'none';
         liveView.style.display = 'block';
         
-        // 우측 패널 전환
         specEditorWrap.style.display = 'none';
         guideScreen.style.display = 'flex';
         
-        // 버튼 & 텍스트 전환
         btnCapture.style.display = 'block';
         btnAddBox.classList.remove('show');
         statusText.innerText = '← 라이브 모드입니다. 화면을 조작한 뒤 캡처 버튼을 누르세요.';
@@ -211,32 +261,26 @@
         currentSceneId = sceneId;
         const sceneData = scenes[sceneId];
         
-        // 탭 UI 변경
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(`tab-${sceneId}`).classList.add('active');
         
-        // 화면 전환: 라이브 숨기고 박제된 HTML 띄우기
         liveView.style.display = 'none';
         sceneView.style.display = 'block';
-        sceneView.innerHTML = sceneData.html; // 박제된 화면 로드
+        sceneView.innerHTML = sceneData.html;
         
-        // 기존에 그렸던 빨간 박스 레이어 로드
         interactionLayer.innerHTML = sceneData.boxesHtml;
         interactionLayer.style.display = 'block';
         
-        // 우측 패널 전환
         guideScreen.style.display = 'none';
         specEditorWrap.style.display = 'flex';
         sceneTitleInput.value = sceneData.title;
         tableBody.innerHTML = sceneData.tableHtml;
         
-        // 버튼 & 텍스트 전환
         btnCapture.style.display = 'none';
         btnAddBox.classList.add('show');
         statusText.innerText = '위 버튼을 눌러 빨간 박스를 추가하고 설명을 적으세요.';
     }
 
-    // 다른 탭 이동 전 현재 상태 저장
     function saveCurrentSceneState() {
         if (currentSceneId && scenes[currentSceneId]) {
             scenes[currentSceneId].boxesHtml = interactionLayer.innerHTML;
@@ -261,12 +305,10 @@
         statusText.innerText = '위 버튼을 눌러 빨간 박스를 추가하고 설명을 적으세요.';
         statusText.style.color = '#aaa';
 
-        // 몇 번째 박스인지 계산
         const boxCount = interactionLayer.querySelectorAll('.red-box').length + 1;
 
-        // 클릭한 위치에 박스 생성 (임의 크기로 생성 후 사용자가 글 작성)
         const rect = mockup.getBoundingClientRect();
-        const top = e.clientY - rect.top + mockup.scrollTop - 20; // 클릭 좌표 보정
+        const top = e.clientY - rect.top + mockup.scrollTop - 20;
         const left = e.clientX - rect.left + mockup.scrollLeft - 50;
         
         const box = document.createElement('div');
@@ -278,7 +320,6 @@
         box.innerHTML = `<div class="red-badge">${boxCount}</div>`;
         interactionLayer.appendChild(box);
 
-        // 우측 표에 새 행 추가
         const tr = document.createElement('tbody');
         tr.innerHTML = `
             <tr class="spec-title-row">
@@ -295,13 +336,13 @@
             </tr>
         `;
         tableBody.appendChild(tr);
-        saveCurrentSceneState(); // 즉시 저장
+        saveCurrentSceneState();
     });
 
     // 7. 최종 결과물 다운로드
-    document.getElementById('export-btn').addEventListener('click', () => {
-        saveCurrentSceneState(); // 현재 탭 내용 저장
-        switchToLive(); // 다운로드 전 화면을 안전하게 초기화
+    btnExport.addEventListener('click', () => {
+        saveCurrentSceneState();
+        switchToLive();
         
         const toolbar = document.getElementById('no-export-toolbar');
         toolbar.style.display = 'none';
@@ -312,7 +353,7 @@
         const blob = new Blob(['<!DOCTYPE html>\n' + htmlContent], { type: 'text/html' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = '노벨피아_다중페이지_기획서.html';
+        a.download = '화면정의서_완성본.html';
         a.click();
     });
 </script>

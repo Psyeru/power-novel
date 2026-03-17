@@ -135,14 +135,21 @@ button { padding:7px 12px; font-size:12px; font-weight:bold; border:none; border
 .image-box .drag-handle { position:absolute; top:-22px; left:0; background:rgba(0,0,0,.6); color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:13px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; opacity:0; transition:.15s; border-radius:3px 3px 0 0; }
 .image-box:hover .drag-handle { opacity:1; }
 /* 배지: 박스 테두리 바깥 좌상단 위로 띄움 */
-.red-badge   { position:absolute; top:-22px; left:-3px; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; border-radius:3px 3px 0 0; }
-/* 배지 페이지 링크 버튼 2개 — 배지 오른쪽, 동일 높이 */
-.badge-link-go  { position:absolute; top:-22px; left:19px; width:18px; height:18px; background:#aaa; color:#fff; font-size:11px; display:none; align-items:center; justify-content:center; cursor:pointer; z-index:10001; border:none; font-weight:bold; line-height:1; border-radius:3px 3px 0 0; }
-.badge-link-set { position:absolute; top:-22px; left:37px; width:18px; height:18px; background:#f59e0b; color:#fff; font-size:9px; display:none; align-items:center; justify-content:center; cursor:pointer; z-index:10001; border:none; font-weight:bold; line-height:1; border-radius:3px 3px 0 0; }
-.red-box:hover .badge-link-go  { display:flex; }
-.red-box:hover .badge-link-set { display:flex; }
-.badge-link-go.linked  { background:#8b5cf6; display:flex !important; }
-.badge-link-go:not(.linked) { background:#aaa; }
+/* ★ 배지: 좌상단 숫자만 고정 표시 */
+.red-badge { position:absolute; top:-22px; left:-3px; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; border-radius:3px 3px 0 0; }
+/* ★ 플로팅 툴바: 박스 하단 중앙에 호버 시 표시 */
+.box-toolbar { position:absolute; bottom:-30px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:2px; background:rgba(30,30,30,.92); border-radius:6px; padding:3px 5px; z-index:10002; pointer-events:auto; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+.toolbar-active .box-toolbar { display:flex; }
+.box-toolbar button { width:22px; height:22px; border:none; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:#fff; display:flex; align-items:center; justify-content:center; padding:0; line-height:1; transition:.1s; }
+.box-toolbar button:hover { filter:brightness(1.25); }
+.tb-drag  { background:#555; cursor:grab !important; font-size:13px; }
+.tb-go    { background:#aaa; }
+.tb-go.linked { background:#8b5cf6; }
+.tb-set   { background:#f59e0b; }
+.tb-copy  { background:#3b82f6; }
+.tb-del   { background:#ef4444; }
+/* 페이지 링크 버튼 (이전 방식 — 숨김 처리) */
+.badge-link-go, .badge-link-set { display:none !important; }
 /* 배지 링크 모달 */
 #badge-link-modal { border:2px solid #f59e0b; min-width:280px; }
 #badge-link-modal h3 { margin:0 0 12px; font-size:14px; color:#f59e0b; }
@@ -153,13 +160,9 @@ button { padding:7px 12px; font-size:12px; font-weight:bold; border:none; border
 .btn-blk-ok  { background:#f59e0b; color:#fff; }
 .btn-blk-clr { background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; }
 .btn-blk-no  { background:#e5e7eb; color:#333; }
-.drag-handle { position:absolute; top:-22px; left:0; background:#555; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:13px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; border-radius:3px 3px 0 0; }
+.drag-handle { display:none; }  /* 툴바 방식으로 통합 — 개별 핸들 숨김 */
 .red-badge:active,.drag-handle:active { cursor:grabbing; }
-/* 삭제/복사 버튼: 박스 우상단 바깥으로 */
-.box-del-btn  { position:absolute; top:-22px; right:-3px; width:18px; height:18px; background:#ef4444; color:#fff; text-align:center; line-height:18px; font-size:10px; cursor:pointer; display:none; font-weight:bold; z-index:10001; border-radius:3px 3px 0 0; }
-.box-copy-btn { position:absolute; top:-22px; right:15px; width:18px; height:18px; background:#3b82f6; color:#fff; text-align:center; line-height:18px; font-size:10px; cursor:pointer; display:none; font-weight:bold; z-index:10001; border-radius:3px 3px 0 0; }
-.red-box:hover .box-del-btn,.highlight-box:hover .box-del-btn,.text-box:hover .box-del-btn,.image-box:hover .box-del-btn { display:block; }
-.red-box:hover .box-copy-btn,.highlight-box:hover .box-copy-btn,.text-box:hover .box-copy-btn,.image-box:hover .box-copy-btn { display:block; }
+.box-del-btn, .box-copy-btn { display:none !important; }  /* 툴바로 통합 */
 .badge-inline { display:inline-block; background:#d93025; color:#fff; border-radius:50%; width:18px; height:18px; text-align:center; line-height:18px; font-size:10px; margin-right:5px; vertical-align:middle; flex-shrink:0; }
 [contenteditable="true"] { outline:none; cursor:text; color:#222; }
 [contenteditable="true"]:hover { background:rgba(0,0,0,.05); cursor:text; border-radius:3px; }
@@ -816,17 +819,17 @@ function addShape(toolType,absTop,absLeft,width,height,path=null,ofsX=0,ofsY=0,m
   if(toolType==='number-box'||toolType==='auto-box'){
     const cnt=interLayer.querySelectorAll('.red-box').length+1;
     box.className='red-box';
-    box.innerHTML=`<div class="red-badge" data-box-id="${uid}">${cnt}</div><button class="badge-link-go" data-action="badge-go" data-box-id="${uid}" title="설정된 페이지로 이동">↗</button><button class="badge-link-set" data-action="badge-link" data-box-id="${uid}" title="클릭 시 이동할 페이지 설정">⚙</button><div class="box-copy-btn" data-action="copy" data-box-id="${uid}" title="복사">⧉</div><div class="box-del-btn" data-action="del" data-box-id="${uid}" title="삭제">✖</div>`;
+    box.innerHTML=`<div class="red-badge" data-box-id="${uid}">${cnt}</div><div class="box-toolbar"><button class="tb-drag" data-action="drag" data-box-id="${uid}" title="이동">✥</button><button class="tb-go" data-action="badge-go" data-box-id="${uid}" title="페이지 이동">↗</button><button class="tb-set" data-action="badge-link" data-box-id="${uid}" title="이동 페이지 설정">⚙</button><button class="tb-copy" data-action="copy" data-box-id="${uid}" title="복사">⧉</button><button class="tb-del" data-action="del" data-box-id="${uid}" title="삭제">✖</button></div>`;
     const tbody=document.createElement('tbody');
     tbody.id='row-'+uid;
     tbody.innerHTML=buildRow(uid,cnt);
     tableBody.appendChild(tbody);
   }else if(toolType==='highlight-box'){
     box.className='highlight-box';
-    box.innerHTML=`<div class="drag-handle" data-box-id="${uid}">✥</div><div class="box-copy-btn" data-action="copy" data-box-id="${uid}" title="복사">⧉</div><div class="box-del-btn" data-action="del" data-box-id="${uid}" title="삭제">✖</div>`;
+    box.innerHTML=`<div class="box-toolbar"><button class="tb-drag" data-action="drag" data-box-id="${uid}" title="이동">✥</button><button class="tb-copy" data-action="copy" data-box-id="${uid}" title="복사">⧉</button><button class="tb-del" data-action="del" data-box-id="${uid}" title="삭제">✖</button></div>`;
   }else if(toolType==='text-box'){
     box.className='text-box';
-    box.innerHTML=`<div class="drag-handle" data-box-id="${uid}">✥</div><div class="box-copy-btn" data-action="copy" data-box-id="${uid}" title="복사">⧉</div><div class="box-del-btn" data-action="del" data-box-id="${uid}" title="삭제">✖</div><div contenteditable="true" style="width:100%;min-height:30px;margin-top:22px;border:none;background:transparent;">내용 입력</div>`;
+    box.innerHTML=`<div class="box-toolbar"><button class="tb-drag" data-action="drag" data-box-id="${uid}" title="이동">✥</button><button class="tb-copy" data-action="copy" data-box-id="${uid}" title="복사">⧉</button><button class="tb-del" data-action="del" data-box-id="${uid}" title="삭제">✖</button></div><div contenteditable="true" style="width:100%;min-height:30px;border:none;background:transparent;padding:4px;">내용 입력</div>`;
   }
   interLayer.appendChild(box);
   saveState();
@@ -847,7 +850,7 @@ function addImageBox(src, absTop, absLeft, path=null, ofsX=0, ofsY=0){
   box.style.top=(absTop-sy)+'px';box.style.left=(absLeft-sx)+'px';
   box.style.width='200px';box.style.height='150px';
   box.className='image-box';
-  box.innerHTML=`<div class="drag-handle" data-box-id="${uid}">✥</div><div class="box-copy-btn" data-action="copy" data-box-id="${uid}" title="복사">⧉</div><div class="box-del-btn" data-action="del" data-box-id="${uid}" title="삭제">✖</div><img src="${src}" alt="">`;
+  box.innerHTML=`<div class="box-toolbar"><button class="tb-drag" data-action="drag" data-box-id="${uid}" title="이동">✥</button><button class="tb-copy" data-action="copy" data-box-id="${uid}" title="복사">⧉</button><button class="tb-del" data-action="del" data-box-id="${uid}" title="삭제">✖</button></div><img src="${src}" alt="">`;
   const img=box.querySelector('img');
   img.onload=()=>{
     if(img.naturalWidth&&img.naturalHeight){
@@ -864,11 +867,30 @@ function buildRow(uid,cnt){
   return `<tr class="spec-title-row"><th>정의</th><td><span class="badge-inline">${cnt}</span><span contenteditable="true" style="border-bottom:1px dashed #d93025;font-weight:800;">기능 제목을 적으세요</span></td><th style="width:82px;padding:4px;"><div class="row-btns"><button class="btn-del-box" onclick="deleteBox('${uid}')">🗑 삭제</button><button class="btn-add-row" onclick="addTableRow('${uid}')">+ 행추가</button><button class="btn-img-attach" onclick="openImgAttach('${uid}')">🖼 이미지</button><button class="btn-link" onclick="openLinkModal('${uid}')">🔗 링크<span class="link-hint">Ctrl+K</span></button></div></th></tr><tr><th><span class="row-drag-handle">⠿</span>01</th><td colspan="2"><div contenteditable="true" style="min-height:20px;">상세 기능 설명을 적으세요.</div></td></tr><tr><th><span class="row-drag-handle">⠿</span>비고</th><td colspan="2"><div contenteditable="true" style="min-height:20px;">비고사항</div></td></tr>`;
 }
 
+// ★ 박스 클릭 시 툴바 표시 — 전역 activeBox 관리
+function setActiveBox(box){
+  interLayer.querySelectorAll('.toolbar-active').forEach(b=>b.classList.remove('toolbar-active'));
+  if(box) box.classList.add('toolbar-active');
+}
+// interaction layer 바깥 클릭 시 툴바 닫기
+document.addEventListener('mousedown',function closeToolbar(e){
+  if(interLayer.contains(e.target)) return;
+  setActiveBox(null);
+},true);
+
 interLayer.addEventListener('click',e=>{
   const delBtn=e.target.closest('[data-action="del"]');
   if(delBtn){deleteBox(delBtn.dataset.boxId);return;}
   const copyBtn=e.target.closest('[data-action="copy"]');
   if(copyBtn){copyBox(copyBtn.dataset.boxId);return;}
+
+  // 박스 본체 클릭 → 툴바 활성화 (툴바 버튼/배지 제외)
+  const box=e.target.closest('.red-box,.highlight-box,.text-box,.image-box');
+  if(box && !e.target.closest('.box-toolbar')){
+    const alreadyActive = box.classList.contains('toolbar-active');
+    setActiveBox(alreadyActive ? null : box);
+    // 배지 클릭은 아래에서 표 스크롤도 처리
+  }
 
   // ★ ↗ 이동 버튼
   const goBtn=e.target.closest('[data-action="badge-go"]');
@@ -1308,7 +1330,7 @@ window.applyBadgeLink=function(){
   if(!boxAbsCoords[currentBadgeLinkBoxId]) boxAbsCoords[currentBadgeLinkBoxId]={};
   boxAbsCoords[currentBadgeLinkBoxId].targetScene=tid;
   const goBtn=safeEl('box-'+currentBadgeLinkBoxId)?.querySelector('[data-action="badge-go"]');
-  if(goBtn){goBtn.classList.add('linked');goBtn.title=`→ ${scenes[tid]?.title||tid}`;}
+  if(goBtn){goBtn.classList.add('linked');goBtn.title='→ '+(scenes[tid]?.title||tid);}
   saveState();closeBadgeLinkModal();
 };
 window.clearBadgeLink=function(){
@@ -1329,17 +1351,19 @@ function restoreBadgeLinkButtons(){
       btn.title=`→ ${scenes[c.targetScene].title}`;
     }else{
       btn.classList.remove('linked');
-      btn.title='설정된 페이지로 이동';
+      btn.title='페이지 이동';
     }
   });
 }
 
 document.addEventListener('mousedown',e=>{
+  // 툴바 내 드래그 버튼 또는 번호 배지로 드래그
   const badge=e.target.closest('.red-badge');
-  const handle=e.target.closest('.drag-handle');
+  const handle=e.target.closest('[data-action="drag"]');
   const trigger=badge||handle;if(!trigger)return;
   if(e.target.closest('.img-resize-handle'))return;
   draggingBox=trigger.closest('.red-box,.highlight-box,.text-box,.image-box');if(!draggingBox)return;
+  setActiveBox(draggingBox);
   const rect=draggingBox.getBoundingClientRect();
   dragOfsX=e.clientX-rect.left;dragOfsY=e.clientY-rect.top;
   interLayer.classList.add('drag-active');

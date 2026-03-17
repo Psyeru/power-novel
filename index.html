@@ -3,366 +3,1267 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HTML 화면 정의서 프로그램 (완벽 구동판)</title>
+<title>HTML 화면 정의서 v6</title>
 <style>
-    /* =========================================================
-       전체 프로그램 레이아웃 및 디자인
-    ========================================================= */
-    body { display: flex; flex-direction: column; height: 100vh; margin: 0; font-family: 'Noto Sans KR', sans-serif; background: #e9ecef; overflow: hidden; }
-    
-    /* 상단 에디터 툴바 & 탭 */
-    .editor-toolbar { background: #111; color: white; display: flex; flex-direction: column; z-index: 10000; }
-    .toolbar-top { display: flex; padding: 10px 20px; align-items: center; gap: 10px; border-bottom: 1px solid #333; }
-    .toolbar-bottom { display: flex; padding: 0 20px; background: #1a1a1a; overflow-x: auto; }
-    
-    button { padding: 8px 16px; font-size: 13px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-    .btn-capture { background: #10b981; color: white; }
-    .btn-capture:hover { background: #059669; }
-    .btn-export { background: #4f46e5; color: white; margin-left: auto; }
-    .btn-export:hover { background: #3730a3; }
-    .btn-add-box { background: #d93025; color: white; display: none; }
-    .btn-add-box.show { display: block; }
-    
-    .status-text { font-size: 13px; color: #aaa; margin-left: 10px; }
-
-    /* 페이지 탭 디자인 */
-    .tab { padding: 12px 20px; color: #888; cursor: pointer; border-bottom: 3px solid transparent; font-size: 14px; font-weight: 700; white-space: nowrap; }
-    .tab:hover { color: #ddd; }
-    .tab.active { color: #fff; border-bottom-color: #4f46e5; background: #222; }
-    .tab-live { color: #10b981; }
-    .tab-live.active { border-bottom-color: #10b981; }
-
-    /* 메인 워크스페이스 */
-    .main-wrap { display: flex; flex: 1; overflow: hidden; }
-    
-    /* 좌측: 스마트폰 목업 영역 */
-    .left-pane { flex: 5; display: flex; justify-content: center; align-items: center; background: #2c2f33; position: relative; padding: 20px; overflow-y: auto; }
-    #app-mockup { width: 480px; height: 800px; background: #fff; overflow: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 10px; }
-    
-    /* 초기 HTML 입력 화면 */
-    #html-loader-ui { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 30px; background: #fff; text-align: center; box-sizing: border-box; }
-    #html-loader-ui h3 { margin-top: 0; color: #333; }
-    #html-loader-ui textarea { width: 100%; height: 250px; margin: 15px 0; padding: 10px; border: 1px solid #ccc; border-radius: 6px; resize: none; font-family: monospace; font-size: 12px; }
-    .file-upload-wrapper { width: 100%; padding: 20px; border: 2px dashed #4f46e5; border-radius: 8px; margin-bottom: 15px; background: #f5f5ff; }
-
-    /* 가상 브라우저(Iframe) 뷰 엔진 */
-    #live-iframe { width: 100%; height: 100%; border: none; display: none; background: #fff; }
-    #scene-iframe { width: 100%; height: 100%; border: none; display: none; background: #fff; pointer-events: none; }
-    #scene-interaction-layer { position: absolute; inset: 0; z-index: 9998; display: none; }
-    
-    /* 요소 선택 모드 */
-    .select-mode-active #scene-interaction-layer { cursor: crosshair; display: block; }
-    
-    /* 우측: 기획서 표 영역 */
-    .right-pane { flex: 5; background: #fff; border-left: 1px solid #ddd; display: flex; flex-direction: column; overflow-y: auto; }
-    .guide-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; text-align: center; line-height: 1.6; }
-    #spec-editor-wrap { display: none; flex-direction: column; }
-    
-    .spec-header { background: #f8f9fa; font-weight: 900; padding: 15px 20px; font-size: 18px; border-bottom: 2px solid #222; color: #111; display: flex; justify-content: space-between; align-items: center;}
-    .spec-header input { font-size: 18px; font-weight: 900; border: none; background: transparent; width: 300px; border-bottom: 1px dashed #ccc; padding: 2px; outline: none; }
-    
-    .spec-table { width: 100%; border-collapse: collapse; }
-    .spec-table th, .spec-table td { border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; padding: 14px; font-size: 13px; text-align: left; vertical-align: top; line-height: 1.5; color: #333; }
-    .spec-table th { background: #f4f4f6; width: 60px; text-align: center; font-weight: 700; color: #555; }
-    .spec-title-row th, .spec-title-row td { background: #fff4f4; border-top: 2px solid #d93025; border-bottom: 1px solid #d93025; }
-    .spec-title-row td { font-weight: 800; color: #d93025; font-size: 14px; }
-    
-    /* 빨간 박스 & 뱃지 */
-    .red-box { position: absolute; border: 3px solid #d93025; z-index: 9999; background: rgba(217, 48, 37, 0.05); pointer-events: none; }
-    .red-badge { position: absolute; top: -15px; left: -15px; background: #d93025; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-    .badge-inline { display: inline-block; background: #d93025; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 11px; margin-right: 6px; vertical-align: middle; }
-
-    /* 수정 가능한 텍스트 영역 */
-    [contenteditable="true"] { outline: none; transition: background 0.2s; padding: 4px; border-radius: 4px; }
-    [contenteditable="true"]:hover { background: rgba(0,0,0,0.05); cursor: text; }
-    [contenteditable="true"]:focus { background: #fffde7; outline: 1px dashed #ccc; }
+* { box-sizing:border-box; }
+body { display:flex; flex-direction:column; height:100vh; margin:0; font-family:'Noto Sans KR',sans-serif; background:#e9ecef; overflow:hidden; }
+.editor-toolbar { background:#111; color:white; display:flex; flex-direction:column; z-index:10000; flex-shrink:0; }
+.toolbar-top { display:flex; padding:8px 16px; align-items:center; gap:6px; border-bottom:1px solid #333; flex-wrap:wrap; min-height:52px; }
+.toolbar-bottom { display:flex; padding:0; background:#1a1a1a; overflow-x:auto; align-items:stretch; }
+button { padding:7px 12px; font-size:12px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; transition:0.15s; flex-shrink:0; white-space:nowrap; }
+.btn-capture   { background:#10b981; color:#fff; } .btn-capture:hover   { background:#059669; }
+.btn-add-blank { background:#8b5cf6; color:#fff; } .btn-add-blank:hover { background:#7c3aed; }
+.btn-del-page  { background:#ef4444; color:#fff; } .btn-del-page:hover  { background:#dc2626; }
+.btn-dup-page  { background:#f59e0b; color:#fff; } .btn-dup-page:hover  { background:#d97706; }
+.btn-edit-html { background:#6366f1; color:#fff; } .btn-edit-html:hover { background:#4f46e5; }
+.btn-add-box   { background:#d93025; color:#fff; } .btn-add-box:hover   { background:#b91c1c; }
+.btn-exp-json  { background:#059669; color:#fff; } .btn-exp-json:hover  { background:#047857; }
+.btn-exp-html  { background:#4f46e5; color:#fff; } .btn-exp-html:hover  { background:#3730a3; }
+#tool-selector { padding:6px 8px; border-radius:5px; font-weight:bold; background:#333; color:#fff; border:1px solid #555; outline:none; font-size:12px; }
+.status-text { font-size:11px; color:#aaa; margin-left:6px; max-width:240px; line-height:1.3; }
+.resize-controls { display:flex; align-items:center; gap:4px; font-size:12px; color:#ccc; background:#222; padding:4px 10px; border-radius:6px; border:1px solid #444; flex-shrink:0; }
+.resize-controls input { width:52px; padding:3px; border-radius:4px; border:1px solid #555; background:#111; color:#fff; text-align:center; font-size:12px; }
+.toolbar-sep { width:1px; height:24px; background:#444; flex-shrink:0; margin:0 2px; }
+#toggle-sidebar-btn,#toggle-boxes-btn { background:#2a2a2a; color:#aaa; border:1px solid #444; font-size:11px; padding:5px 9px; }
+#toggle-sidebar-btn:hover,#toggle-boxes-btn:hover { background:#3a3a3a; color:#fff; }
+#toggle-boxes-btn.hidden-mode { background:#f59e0b; color:#111; }
+#renumber-btn { background:#f97316; color:#fff; font-size:11px; padding:5px 9px; }
+.tab { padding:10px 16px; color:#888; cursor:pointer; border-bottom:3px solid transparent; font-size:13px; font-weight:700; white-space:nowrap; user-select:none; display:flex; align-items:center; gap:5px; }
+.tab:hover { color:#ddd; background:#252525; }
+.tab.active { color:#fff; border-bottom-color:#4f46e5; background:#222; }
+.tab-live { color:#10b981; } .tab-live.active { border-bottom-color:#10b981; }
+.tab.drag-over { background:#2a2a5a; border-left:3px solid #4f46e5; }
+.tab-ver-dot { width:6px; height:6px; border-radius:50%; background:#f59e0b; display:none; }
+.main-wrap { display:flex; flex:1; overflow:hidden; }
+#thumbnail-sidebar { width:200px; background:#1e1e1e; border-right:1px solid #333; display:none; flex-direction:column; overflow-y:auto; flex-shrink:0; }
+#thumbnail-sidebar.visible { display:flex; }
+.sidebar-header { padding:10px 12px; font-size:11px; font-weight:700; color:#888; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; }
+.sidebar-header button { background:none; border:none; color:#888; font-size:14px; cursor:pointer; padding:2px 5px; border-radius:3px; }
+.sidebar-header button:hover { background:#333; color:#fff; }
+.thumb-item { padding:10px 12px; cursor:pointer; border-bottom:1px solid #2a2a2a; transition:background .15s; display:flex; flex-direction:column; gap:5px; }
+.thumb-item:hover { background:#2a2a2a; }
+.thumb-item.active { background:#252545; border-left:3px solid #4f46e5; }
+.thumb-preview { width:100%; background:#fff; border-radius:4px; overflow:hidden; border:1px solid #444; }
+.thumb-preview iframe { width:480px; height:800px; border:none; transform-origin:top left; pointer-events:none; display:block; }
+.thumb-label { font-size:11px; color:#aaa; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-left:5px; }
+.left-pane { flex:1; display:flex; justify-content:center; align-items:flex-start; background:#2c2f33; padding:20px; overflow:auto; }
+#app-mockup { width:480px; height:800px; background:#fff; overflow:hidden; position:relative; box-shadow:0 10px 30px rgba(0,0,0,.5); border-radius:10px; flex-shrink:0; }
+#html-loader-ui { display:flex; flex-direction:column; align-items:center; height:100%; padding:20px; background:#fff; text-align:center; overflow-y:auto; }
+#html-loader-ui h3 { margin-top:10px; color:#333; font-size:15px; }
+#html-loader-ui textarea { width:100%; height:200px; margin:10px 0; padding:10px; border:1px solid #ccc; border-radius:6px; resize:vertical; font-family:monospace; font-size:11px; }
+.file-upload-wrapper { width:100%; padding:14px; border:2px dashed #4f46e5; border-radius:8px; margin-bottom:10px; background:#f5f5ff; text-align:left; }
+.json-upload-wrapper { width:100%; padding:14px; border:2px dashed #10b981; border-radius:8px; margin-bottom:10px; background:#ecfdf5; text-align:left; }
+.clear-file-btn { padding:4px 8px; font-size:11px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer; }
+#live-iframe  { width:100%; height:100%; border:none; display:none; background:#fff; }
+#scene-iframe { width:100%; height:100%; border:none; display:none; background:#fff; }
+#scene-interaction-layer { position:absolute; inset:0; z-index:9998; display:none; pointer-events:none; overflow:hidden; }
+#scene-interaction-layer.drag-active { pointer-events:auto !important; }
+#scene-interaction-layer.boxes-hidden .red-box,
+#scene-interaction-layer.boxes-hidden .highlight-box,
+#scene-interaction-layer.boxes-hidden .text-box { opacity:.15; pointer-events:none; }
+#add-tool-overlay { position:absolute; inset:0; z-index:9999; display:none; }
+.select-mode-active #add-tool-overlay { display:block; cursor:crosshair; pointer-events:auto; }
+.right-pane { width:540px; min-width:400px; background:#fff; border-left:1px solid #ddd; display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
+.guide-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#888; text-align:center; line-height:1.6; padding:20px; }
+#spec-editor-wrap { display:none; flex-direction:column; height:100%; overflow:hidden; }
+.spec-header { background:#f8f9fa; padding:12px 16px; border-bottom:2px solid #222; display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+.spec-header-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.spec-header input.title-input { font-size:15px; font-weight:900; border:none; background:transparent; flex:1; border-bottom:1px dashed #ccc; padding:2px; outline:none; min-width:120px; }
+.version-selector { padding:3px 7px; border-radius:4px; border:1px solid #d1d5db; font-size:11px; background:#fff; cursor:pointer; outline:none; max-width:160px; }
+.btn-ver-new { background:#4f46e5; color:#fff; font-size:10px; padding:3px 7px; border-radius:4px; }
+.btn-ver-new:hover { background:#3730a3; }
+.btn-ver-del { background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; font-size:10px; padding:3px 7px; border-radius:4px; }
+.btn-ver-del:hover { background:#fca5a5; color:#fff; }
+.status-tag { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; cursor:pointer; border:2px solid transparent; transition:.15s; }
+.status-tag.none        { background:#f0f0f0; color:#888; border-color:#ddd; }
+.status-tag.reviewing   { background:#fef3c7; color:#92400e; border-color:#fbbf24; }
+.status-tag.in-progress { background:#dbeafe; color:#1e40af; border-color:#3b82f6; }
+.status-tag.done        { background:#d1fae5; color:#065f46; border-color:#10b981; }
+.status-tag.hold        { background:#fee2e2; color:#991b1b; border-color:#ef4444; }
+.status-tag.active-tag  { box-shadow:0 0 0 2px rgba(0,0,0,.2); transform:scale(1.05); }
+.page-memo-area { display:none; padding:10px 16px; background:#fffbeb; border-bottom:1px solid #fde68a; }
+.page-memo-area.visible { display:block; }
+.page-memo-area textarea { width:100%; border:1px solid #fde68a; border-radius:4px; padding:6px; font-size:12px; resize:vertical; min-height:55px; outline:none; font-family:inherit; }
+.page-memo-area label { font-size:11px; font-weight:700; color:#92400e; display:block; margin-bottom:4px; }
+.spec-table-scroll { overflow-y:auto; flex:1; scroll-behavior:smooth; }
+.spec-table { width:100%; border-collapse:collapse; }
+.spec-table th,.spec-table td { border-bottom:1px solid #ddd; border-right:1px solid #ddd; padding:8px 10px; font-size:12px; text-align:left; vertical-align:top; line-height:1.5; color:#333; }
+.spec-table th { background:#f4f4f6; width:50px; text-align:center; font-weight:700; color:#555; }
+.spec-title-row th,.spec-title-row td { background:#fff4f4; border-top:2px solid #d93025; border-bottom:1px solid #d93025; }
+.spec-title-row td { font-weight:800; color:#d93025; font-size:13px; }
+@keyframes rowHL { 0%{background:rgba(217,48,37,.25)} 100%{background:transparent} }
+.row-highlight { animation:rowHL 1.6s ease forwards; }
+.row-btns { display:flex; flex-direction:column; gap:3px; }
+.btn-del-box    { background:#fee2e2; color:#ef4444; border:1px solid #f87171; padding:3px 6px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold; transition:.15s; }
+.btn-del-box:hover    { background:#fca5a5; color:#fff; }
+.btn-add-row    { background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; padding:3px 6px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold; transition:.15s; }
+.btn-add-row:hover    { background:#bae6fd; }
+.btn-img-attach { background:#f0fdf4; color:#166534; border:1px solid #86efac; padding:3px 6px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold; transition:.15s; }
+.btn-img-attach:hover { background:#bbf7d0; }
+.btn-link       { background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; padding:3px 6px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold; transition:.15s; }
+.btn-link:hover { background:#ddd6fe; }
+.link-hint { font-size:9px; color:#aaa; display:block; margin-top:1px; }
+.row-drag-handle { cursor:grab; color:#bbb; user-select:none; font-size:14px; padding:0 3px; display:inline-block; }
+.row-drag-handle:active { cursor:grabbing; }
+.img-block { position:relative; display:inline-block; margin:4px 0; user-select:none; }
+.img-block img { display:block; border-radius:4px; border:1px solid #ddd; min-width:40px; min-height:40px; }
+.img-block:hover img { outline:2px solid #3b82f6; }
+.img-block-del { position:absolute; top:-6px; right:-6px; background:#ef4444; color:#fff; border:none; border-radius:50%; width:18px; height:18px; font-size:10px; cursor:pointer; display:none; align-items:center; justify-content:center; font-weight:bold; padding:0; z-index:2; }
+.img-block:hover .img-block-del { display:flex; }
+.img-resize-handle { position:absolute; width:10px; height:10px; background:#3b82f6; border:1px solid #fff; border-radius:2px; z-index:3; display:none; }
+.img-block:hover .img-resize-handle { display:block; }
+.img-resize-handle.br { bottom:-4px; right:-4px; cursor:nwse-resize; }
+.img-resize-handle.bl { bottom:-4px; left:-4px; cursor:nesw-resize; }
+.img-resize-handle.tr { top:-4px; right:-4px; cursor:nesw-resize; }
+.img-resize-handle.tl { top:-4px; left:-4px; cursor:nwse-resize; }
+.inline-link-chip { display:inline-flex; align-items:center; gap:2px; margin:2px 2px 0 0; vertical-align:middle; user-select:none; }
+.inline-link-chip .link-item { display:inline-flex; align-items:center; background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; border-radius:10px; padding:2px 8px; font-size:11px; text-decoration:none; cursor:pointer; transition:.15s; }
+.inline-link-chip .link-item:hover { background:#ddd6fe; }
+.inline-link-chip .lk-del { background:#ef4444; color:#fff; border:none; border-radius:50%; width:14px; height:14px; font-size:9px; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; flex-shrink:0; }
+.inline-link-chip:hover .lk-del { display:flex; }
+.td-link-area { display:flex; flex-wrap:wrap; gap:3px; margin-top:4px; padding-top:3px; border-top:1px dashed #e5e7eb; }
+.red-box       { position:absolute; border:3px solid #d93025; z-index:9999; background:rgba(217,48,37,.05); resize:both; overflow:hidden; pointer-events:auto; }
+.highlight-box { position:absolute; border:3px solid #3b82f6; background:rgba(59,130,246,.1); z-index:9999; resize:both; overflow:hidden; pointer-events:auto; }
+.text-box      { position:absolute; border:1px dashed #aaa; background:rgba(255,255,255,.9); z-index:9999; resize:both; overflow:hidden; pointer-events:auto; padding:5px; font-size:13px; min-height:30px; }
+.text-box:focus-within { border-color:#4f46e5; }
+.red-badge   { position:absolute; top:0; left:0; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; }
+.drag-handle { position:absolute; top:0; left:0; background:#555; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:13px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; }
+.red-badge:active,.drag-handle:active { cursor:grabbing; }
+.box-del-btn  { position:absolute; top:0; right:0; width:18px; height:18px; background:#ef4444; color:#fff; text-align:center; line-height:18px; font-size:10px; cursor:pointer; display:none; font-weight:bold; z-index:10001; border-radius:0; }
+.box-copy-btn { position:absolute; top:0; right:20px; width:18px; height:18px; background:#3b82f6; color:#fff; text-align:center; line-height:18px; font-size:10px; cursor:pointer; display:none; font-weight:bold; z-index:10001; border-radius:0; }
+.red-box:hover .box-del-btn,.highlight-box:hover .box-del-btn,.text-box:hover .box-del-btn { display:block; }
+.red-box:hover .box-copy-btn,.highlight-box:hover .box-copy-btn,.text-box:hover .box-copy-btn { display:block; }
+.badge-inline { display:inline-block; background:#d93025; color:#fff; border-radius:50%; width:18px; height:18px; text-align:center; line-height:18px; font-size:10px; margin-right:5px; vertical-align:middle; flex-shrink:0; }
+[contenteditable="true"] { outline:none; cursor:text; color:#222; }
+[contenteditable="true"]:hover { background:rgba(0,0,0,.05); cursor:text; border-radius:3px; }
+[contenteditable="true"]:focus { background:#fffde7; outline:1px dashed #ccc; border-radius:3px; cursor:text; }
+.spec-table, .spec-table th, .spec-table td { cursor:default; color:#222; }
+.spec-table td div[contenteditable] { cursor:text; }
+.right-pane { caret-color:#222 !important; color:#222 !important; }
+.right-pane * { caret-color:#222 !important; }
+.spec-table-scroll { background:#fff; color:#222; }
+.spec-table-scroll * { color:#222; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:99998; }
+.modal-box { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; border-radius:10px; padding:20px; z-index:99999; box-shadow:0 20px 60px rgba(0,0,0,.3); min-width:300px; }
+#renumber-panel { border:2px solid #4f46e5; }
+#renumber-panel h3 { margin:0 0 8px; font-size:14px; color:#4f46e5; }
+#renumber-panel p  { font-size:11px; color:#888; margin:0 0 10px; }
+#renumber-list { list-style:none; padding:0; margin:0 0 12px; max-height:280px; overflow-y:auto; }
+#renumber-list li { padding:7px 10px; margin-bottom:3px; background:#f4f4f6; border-radius:5px; cursor:grab; font-size:12px; display:flex; align-items:center; gap:7px; border:1px solid #ddd; }
+#renumber-list li .num-badge { background:#d93025; color:#fff; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; flex-shrink:0; }
+#rnm-btns { display:flex; gap:8px; }
+#rnm-btns button { flex:1; padding:7px; font-size:12px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; }
+.btn-rnm-ok { background:#4f46e5; color:#fff; }
+.btn-rnm-no { background:#e5e7eb; color:#333; }
+#link-modal { border:2px solid #8b5cf6; min-width:320px; }
+#link-modal h3 { margin:0 0 12px; font-size:14px; color:#8b5cf6; }
+#link-modal label { font-size:11px; color:#555; font-weight:700; display:block; margin-bottom:3px; }
+#link-modal input,#link-modal select { width:100%; padding:7px 9px; border:1px solid #d1d5db; border-radius:5px; font-size:12px; outline:none; margin-bottom:10px; }
+#link-modal input:focus { border-color:#8b5cf6; }
+#link-modal-btns { display:flex; gap:8px; }
+#link-modal-btns button { flex:1; padding:8px; font-size:12px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; }
+.btn-lk-ok { background:#8b5cf6; color:#fff; }
+.btn-lk-no { background:#e5e7eb; color:#333; }
+.hidden-input { display:none; }
 </style>
 </head>
 <body>
-
 <div class="editor-toolbar" id="no-export-toolbar">
-    <div class="toolbar-top">
-        <button class="btn-capture" id="capture-btn" style="display:none;">📸 현재 화면을 새 기획 페이지로 저장</button>
-        <button class="btn-add-box" id="add-box-btn">➕ 빨간 박스 찍기</button>
-        <div class="status-text" id="status-text">← 먼저 기획할 HTML 파일이나 코드를 로드해주세요.</div>
-        <button class="btn-export" id="export-btn" style="display:none;">💾 HTML 최종본 다운로드</button>
+  <div class="toolbar-top">
+    <button class="btn-capture"   id="capture-btn"    style="display:none;">📸 캡처</button>
+    <button class="btn-add-blank" id="add-blank-btn"  style="display:none;">📄 빈 페이지</button>
+    <button class="btn-dup-page"  id="dup-page-btn"   style="display:none;">⧉ 페이지 복제</button>
+    <div class="toolbar-sep" id="sep1" style="display:none;"></div>
+    <select id="tool-selector" style="display:none;">
+      <option value="auto-box">🎯 자동 선택 (F12 방식)</option>
+      <option value="number-box">1️⃣ 번호 박스 (표 연동)</option>
+      <option value="highlight-box">🔲 강조 사각형</option>
+      <option value="text-box">📝 텍스트 툴</option>
+    </select>
+    <button class="btn-add-box" id="add-box-btn"      style="display:none;">➕ 도구 추가</button>
+    <button id="toggle-boxes-btn"                     style="display:none;">👁 박스 숨기기</button>
+    <button id="renumber-btn"                         style="display:none;">🔢 번호 재정렬</button>
+    <div class="toolbar-sep" id="sep2" style="display:none;"></div>
+    <button class="btn-edit-html" id="edit-html-btn"  style="display:none;">✏️ HTML 수정</button>
+    <button class="btn-exp-json"  id="exp-json-btn"   style="display:none;">💾 설정 저장</button>
+    <button class="btn-exp-html"  id="exp-html-btn"   style="display:none;">🌐 배포본 다운로드</button>
+    <div class="toolbar-sep" id="sep3" style="display:none;"></div>
+    <button id="toggle-sidebar-btn"                   style="display:none;">🗂 썸네일</button>
+    <div class="resize-controls" id="resize-controls" style="display:none;">
+      <span>W</span><input type="number" id="mockup-w" value="480">
+      <span>H</span><input type="number" id="mockup-h" value="800">
     </div>
-    <div class="toolbar-bottom" id="tab-container">
-        <div class="tab tab-live active" id="tab-live" onclick="switchToLive()" style="display:none;">🟢 라이브 조작 모드</div>
-    </div>
+    <div class="toolbar-sep" id="sep4" style="display:none;"></div>
+    <button class="btn-del-page" id="del-page-btn"    style="display:none;">🗑 페이지 삭제</button>
+    <span class="status-text" id="status-text">← 먼저 HTML 파일이나 코드를 로드해주세요.</span>
+  </div>
+  <div class="toolbar-bottom" id="tab-container">
+    <div class="tab tab-live" id="tab-live" onclick="switchToLive()" style="display:none;">🟢 라이브 모드</div>
+  </div>
 </div>
-
 <div class="main-wrap">
-    <div class="left-pane">
-        <div id="app-mockup">
-            
-            <div id="html-loader-ui">
-                <h3>기획할 HTML 화면 불러오기</h3>
-                
-                <div class="file-upload-wrapper">
-                    <label style="font-weight:bold; color:#4f46e5;">📁 HTML 파일 선택:</label><br><br>
-                    <input type="file" id="file-upload" accept=".html,.txt">
-                </div>
-                
-                <div style="font-size:14px; color:#888;">또는 아래에 코드를 직접 붙여넣으세요</div>
-                <textarea id="html-textarea" placeholder="여기에 HTML 코드를 통째로 붙여넣으세요..."></textarea>
-                
-                <button id="load-html-btn" style="padding:12px 24px; background:#4f46e5; color:#fff; font-size:15px; width:100%;">🚀 화면 렌더링 시작</button>
-            </div>
-
-            <iframe id="live-iframe"></iframe>
-            <iframe id="scene-iframe"></iframe>
-            <div id="scene-interaction-layer"></div>
-
+  <div id="thumbnail-sidebar">
+    <div class="sidebar-header"><span>📋 페이지 목록</span><button onclick="closeSidebar()">✕</button></div>
+    <div id="thumbnail-list"></div>
+  </div>
+  <div class="left-pane">
+    <div id="app-mockup">
+      <div id="html-loader-ui">
+        <h3>기획할 HTML 화면 불러오기</h3>
+        <div class="json-upload-wrapper">
+          <label style="font-weight:bold;color:#059669;font-size:13px;">📂 기존 설정(.json) 불러오기</label><br><br>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="file" id="json-upload" accept=".json" style="font-size:12px;">
+            <button class="clear-file-btn" id="clear-json-btn">취소</button>
+          </div>
+          <div style="font-size:11px;color:#059669;margin-top:5px;">저장했던 설정 파일을 불러와 바로 복구됩니다.</div>
         </div>
+        <div class="file-upload-wrapper">
+          <label style="font-weight:bold;color:#4f46e5;font-size:13px;">📁 HTML 파일 선택 (새로 시작)</label><br><br>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="file" id="file-upload" accept=".html,.txt" style="font-size:12px;">
+            <button class="clear-file-btn" id="clear-html-btn">지우기</button>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#888;margin-bottom:6px;">또는 코드를 직접 붙여넣기</div>
+        <textarea id="html-textarea" placeholder="HTML 코드를 통째로 붙여넣으세요..."></textarea>
+        <button id="load-html-btn" style="padding:10px 24px;background:#4f46e5;color:#fff;font-size:14px;width:100%;border-radius:6px;border:none;cursor:pointer;font-weight:bold;">🚀 화면 렌더링 시작</button>
+      </div>
+      <iframe id="live-iframe"></iframe>
+      <iframe id="scene-iframe"></iframe>
+      <div id="scene-interaction-layer"></div>
+      <div id="add-tool-overlay"></div>
     </div>
-
-    <div class="right-pane">
-        <div class="guide-screen" id="guide-screen">
-            <h3>대기 중</h3>
-            <p>좌측에서 HTML 코드를 불러오면 기획을 시작할 수 있습니다.</p>
-        </div>
-        
-        <div id="spec-editor-wrap">
-            <div class="spec-header">
-                <input type="text" id="scene-title-input" value="기획서 페이지 제목">
-                <span style="font-size:12px; color:#aaa; font-weight:normal;">(제목 수정 가능)</span>
-            </div>
-            <table class="spec-table" id="spec-table-body">
-                </table>
-        </div>
+  </div>
+  <div class="right-pane">
+    <div class="guide-screen" id="guide-screen">
+      <h3>대기 중</h3>
+      <p>좌측에서 HTML 코드를 불러오거나 설정 파일을 로드하면<br>기획을 시작할 수 있습니다.</p>
     </div>
+    <div id="spec-editor-wrap">
+      <div class="spec-header">
+        <div class="spec-header-row">
+          <input type="text" class="title-input" id="scene-title-input" value="기획서 페이지 제목">
+          <button id="toggle-memo-btn" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;flex-shrink:0;">📝 메모</button>
+        </div>
+        <div class="spec-header-row">
+          <span style="font-size:11px;color:#999;font-weight:700;white-space:nowrap;">📌 버전:</span>
+          <select class="version-selector" id="version-selector" onchange="switchVersion(this.value)"></select>
+          <button class="btn-ver-new" onclick="addNewVersion()">+ 새 버전</button>
+          <button class="btn-ver-del" onclick="deleteVersion()">삭제</button>
+        </div>
+        <div class="spec-header-row">
+          <span style="font-size:11px;color:#999;font-weight:700;">상태:</span>
+          <span class="status-tag none active-tag"      data-status="none"        onclick="setPageStatus('none')">없음</span>
+          <span class="status-tag reviewing"            data-status="reviewing"   onclick="setPageStatus('reviewing')">검토중</span>
+          <span class="status-tag in-progress"          data-status="in-progress" onclick="setPageStatus('in-progress')">개발중</span>
+          <span class="status-tag done"                 data-status="done"        onclick="setPageStatus('done')">완료</span>
+          <span class="status-tag hold"                 data-status="hold"        onclick="setPageStatus('hold')">보류</span>
+        </div>
+      </div>
+      <div class="page-memo-area" id="page-memo-area">
+        <label>📝 페이지 메모 / 코멘트</label>
+        <textarea id="page-memo-text" placeholder="메모, 코멘트, 특이사항 등을 작성하세요."></textarea>
+      </div>
+      <div class="spec-table-scroll" id="spec-table-scroll">
+        <table class="spec-table" id="spec-table-body"></table>
+      </div>
+    </div>
+  </div>
 </div>
-
+<div class="modal-overlay" id="renumber-overlay" onclick="closeRenumberPanel()"></div>
+<div class="modal-box" id="renumber-panel">
+  <h3>🔢 박스 번호 재정렬</h3>
+  <p>항목을 드래그하여 순서를 바꾸면 번호와 표가 자동 재정렬됩니다.</p>
+  <ul id="renumber-list"></ul>
+  <div id="rnm-btns">
+    <button class="btn-rnm-ok" onclick="applyRenumber()">✅ 적용</button>
+    <button class="btn-rnm-no" onclick="closeRenumberPanel()">취소</button>
+  </div>
+</div>
+<div class="modal-overlay" id="link-overlay" onclick="closeLinkModal()"></div>
+<div class="modal-box" id="link-modal">
+  <h3>🔗 링크 추가 <small style="font-size:10px;color:#aaa;">Ctrl+K</small></h3>
+  <label>표시 이름</label>
+  <input type="text" id="link-label" placeholder="예: 로그인 화면으로 이동">
+  <label>링크 유형</label>
+  <select id="link-type" onchange="onLinkTypeChange()">
+    <option value="url">외부 URL</option>
+    <option value="page">내부 페이지 이동</option>
+  </select>
+  <div id="link-url-wrap">
+    <label>URL</label>
+    <input type="text" id="link-url" placeholder="https://...">
+  </div>
+  <div id="link-page-wrap" style="display:none;">
+    <label>이동할 페이지</label>
+    <select id="link-page-sel"></select>
+  </div>
+  <label>링크를 달 행 선택</label>
+  <select id="link-row-sel"></select>
+  <div id="link-modal-btns">
+    <button class="btn-lk-ok" onclick="applyLink()">추가</button>
+    <button class="btn-lk-no" onclick="closeLinkModal()">취소</button>
+  </div>
+</div>
+<input type="file" id="global-img-input" class="hidden-input" accept="image/*" multiple>
 <script>
-    // =========================================================
-    // 가상 브라우저(Iframe) 구동 엔진
-    // =========================================================
-    let scenes = {};
-    let currentSceneId = null;
-    let isSelecting = false;
-    let sceneCounter = 1;
+'use strict';
+let scenes=window.INIT_SCENES||{};
+let sceneCounter=window.INIT_SCENE_COUNTER||1;
+let currentSceneId=null;
+let currentVerKey='v1';
+let isSelecting=false;
+let draggingBox=null,dragOfsX=0,dragOfsY=0;
+let currentImgBoxId=null;
+let currentLinkBoxId=null;
+let linkTargetCE=null;
+let boxAbsCoords={};
 
-    const loaderUi = document.getElementById('html-loader-ui');
-    const liveIframe = document.getElementById('live-iframe');
-    const sceneIframe = document.getElementById('scene-iframe');
-    const interactionLayer = document.getElementById('scene-interaction-layer');
-    const mockup = document.getElementById('app-mockup');
-    
-    const guideScreen = document.getElementById('guide-screen');
-    const specEditorWrap = document.getElementById('spec-editor-wrap');
-    const tableBody = document.getElementById('spec-table-body');
-    const sceneTitleInput = document.getElementById('scene-title-input');
-    
-    const btnCapture = document.getElementById('capture-btn');
-    const btnAddBox = document.getElementById('add-box-btn');
-    const btnExport = document.getElementById('export-btn');
-    const statusText = document.getElementById('status-text');
-    const tabContainer = document.getElementById('tab-container');
-    const tabLive = document.getElementById('tab-live');
+const $=id=>document.getElementById(id);
+function safeEl(id){return document.getElementById(id);}
 
-    // 0. 파일 업로드 및 코드 로드 (Iframe에 직접 주입)
-    document.getElementById('file-upload').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            document.getElementById('html-textarea').value = evt.target.result;
-        };
-        reader.readAsText(file);
-    });
+const loaderUi=$('html-loader-ui');
+const liveIframe=$('live-iframe');
+const sceneIframe=$('scene-iframe');
+const interLayer=$('scene-interaction-layer');
+const addOverlay=$('add-tool-overlay');
+const mockup=$('app-mockup');
+const guideScreen=$('guide-screen');
+const specWrap=$('spec-editor-wrap');
+const tableBody=$('spec-table-body');
+const tableScroll=$('spec-table-scroll');
+const titleInput=$('scene-title-input');
+const tabContainer=$('tab-container');
+const tabLive=$('tab-live');
+const statusText=$('status-text');
+const pageMemoArea=$('page-memo-area');
+const pageMemoText=$('page-memo-text');
+const versionSel=$('version-selector');
 
-    document.getElementById('load-html-btn').addEventListener('click', () => {
-        const code = document.getElementById('html-textarea').value;
-        if(code.trim() === '') {
-            alert('HTML 코드를 붙여넣거나 파일을 업로드해주세요.');
-            return;
+// ★★★ 핵심 아이디어 (공유해주신 코드)
+// getBoundingClientRect()를 매 프레임 직접 호출하면
+// position:fixed 오버레이는 스크롤과 무관하게 뷰포트 좌표를 반환
+// position:relative/absolute 요소는 스크롤에 따라 좌표가 바뀜
+// → 어떤 요소든 그 요소의 현재 화면 위치에 박스가 정확히 고정됨!
+function getElementPath(el){
+  if(!el||el.nodeType!==1) return '';
+  let path=[];
+  while(el&&el.nodeType===1&&el.tagName.toLowerCase()!=='html'){
+    let sel=el.tagName.toLowerCase();
+    if(el.id&&/^[a-zA-Z][\w\-]*$/.test(el.id)){sel+='#'+el.id;path.unshift(sel);break;}
+    let idx=1,sib=el.previousElementSibling;
+    while(sib){if(sib.tagName===el.tagName)idx++;sib=sib.previousElementSibling;}
+    if(idx>1) sel+=':nth-of-type('+idx+')';
+    path.unshift(sel);
+    el=el.parentNode;
+  }
+  return path.join(' > ');
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(window.INIT_SCENES&&Object.keys(window.INIT_SCENES).length>0){
+    scenes=window.INIT_SCENES;
+    sceneCounter=window.INIT_SCENE_COUNTER||1;
+    if(loaderUi) loaderUi.style.display='none';
+    if(liveIframe) liveIframe.style.display='none';
+    if(guideScreen) guideScreen.style.display='none';
+    if(window.IS_EXPORTED_HTML) hideEditUI(); else showEditUI();
+    document.querySelectorAll('.tab:not(#tab-live)').forEach(t=>t.remove());
+    Object.keys(scenes).forEach(addTabForScene);
+    const first=Object.keys(scenes)[0];
+    if(first) switchToScene(first);
+  }
+});
+
+function showEditUI(){
+  ['tab-live','capture-btn','add-blank-btn','dup-page-btn','edit-html-btn',
+   'exp-json-btn','exp-html-btn','toggle-sidebar-btn','sep1','sep2','sep3','sep4']
+    .forEach(id=>{const e=safeEl(id);if(e)e.style.display='block';});
+  const rc=safeEl('resize-controls');if(rc)rc.style.display='flex';
+}
+function hideEditUI(){
+  ['capture-btn','add-blank-btn','dup-page-btn','edit-html-btn','exp-json-btn',
+   'exp-html-btn','del-page-btn','toggle-sidebar-btn','sep1','sep2','sep3','sep4',
+   'toggle-boxes-btn','renumber-btn','add-box-btn','tool-selector','resize-controls']
+    .forEach(id=>{const e=safeEl(id);if(e)e.style.display='none';});
+  const tb=safeEl('tab-live');if(tb)tb.style.display='none';
+}
+function showSceneTools(){
+  ['add-box-btn','tool-selector','toggle-boxes-btn','renumber-btn','del-page-btn']
+    .forEach(id=>{const e=safeEl(id);if(e)e.style.display='block';});
+  ['capture-btn','add-blank-btn','dup-page-btn']
+    .forEach(id=>{const e=safeEl(id);if(e)e.style.display='none';});
+}
+function showLiveTools(){
+  ['capture-btn','add-blank-btn']
+    .forEach(id=>{const e=safeEl(id);if(e)e.style.display='block';});
+  ['dup-page-btn','add-box-btn','tool-selector','toggle-boxes-btn','renumber-btn','del-page-btn']
+    .forEach(id=>{const e=safeEl(id);if(e)e.style.display='none';});
+}
+
+function setIframeContent(iframe,html){
+  const doc=iframe.contentWindow.document;
+  doc.open();doc.write(html);doc.close();
+}
+
+// ★ rAF 루프: 매 프레임 getBoundingClientRect()로 박스 위치 갱신
+// position:fixed 오버레이 → 스크롤해도 뷰포트 기준 고정좌표 반환 → 박스 고정
+// 일반 요소 → 스크롤 따라 좌표 변경 → 박스도 함께 이동
+let lastBoxStates={};
+function syncBoxPositions(){
+  let sy=0,sx=0,cd=null;
+  try{
+    const cw=sceneIframe.contentWindow;cd=sceneIframe.contentDocument;
+    sy=cw.scrollY||(cd&&cd.documentElement.scrollTop)||(cd&&cd.body&&cd.body.scrollTop)||0;
+    sx=cw.scrollX||(cd&&cd.documentElement.scrollLeft)||(cd&&cd.body&&cd.body.scrollLeft)||0;
+  }catch(e){}
+  interLayer.querySelectorAll('.red-box,.highlight-box,.text-box').forEach(box=>{
+    const id=box.id.replace('box-','');
+    const c=boxAbsCoords[id];
+    if(!c) return;
+    let nT=c.top-sy,nL=c.left-sx,nW='',nH='';
+    if(c.path&&cd){
+      try{
+        const el=cd.querySelector(c.path);
+        if(el){
+          const rect=el.getBoundingClientRect();
+          if(rect.width>0||rect.height>0){
+            nT=rect.top+c.ofsY;
+            nL=rect.left+c.ofsX;
+            if(c.matchSize){nW=rect.width;nH=rect.height;}
+          }
         }
-        
-        // 핵심: Iframe의 srcdoc 속성을 사용해 완벽한 가상 브라우저 환경 제공
-        liveIframe.srcdoc = code;
-        
-        loaderUi.style.display = 'none';
-        liveIframe.style.display = 'block';
-        
-        btnCapture.style.display = 'block';
-        btnExport.style.display = 'block';
-        tabLive.style.display = 'block';
-        
-        guideScreen.innerHTML = '<h3>🟢 라이브 조작 모드 작동 중</h3><p>좌측 화면을 클릭하여 원하는 메뉴나 모달창을 여세요.<br>원하는 장면이 나오면 상단의 <b>[📸 캡처]</b> 버튼을 누르세요.</p>';
-        statusText.innerText = '← 라이브 모드입니다. 화면을 조작한 뒤 캡처 버튼을 누르세요.';
-    });
-
-    // 1. 현재 화면 캡처 및 새 페이지 생성 (동적 상태 보존)
-    btnCapture.addEventListener('click', () => {
-        const sceneId = 'scene_' + Date.now();
-        let htmlSnapshot = '';
-        
-        // Iframe 내부의 변화된 상태(모달 열림 등)를 통째로 가져옴
-        try {
-            htmlSnapshot = liveIframe.contentDocument.documentElement.outerHTML;
-        } catch(e) {
-            // 보안 정책으로 막힐 경우 원본 코드로 대체
-            htmlSnapshot = liveIframe.srcdoc;
-        }
-        
-        scenes[sceneId] = {
-            id: sceneId,
-            title: `페이지 ${sceneCounter}`,
-            html: htmlSnapshot,
-            boxesHtml: '',
-            tableHtml: ''
-        };
-        
-        const newTab = document.createElement('div');
-        newTab.className = 'tab';
-        newTab.innerText = `📄 페이지 ${sceneCounter}`;
-        newTab.id = `tab-${sceneId}`;
-        newTab.onclick = () => switchToScene(sceneId);
-        tabContainer.appendChild(newTab);
-        
-        sceneCounter++;
-        switchToScene(sceneId);
-    });
-
-    // 2. 제목 수정
-    sceneTitleInput.addEventListener('input', (e) => {
-        if(!currentSceneId) return;
-        scenes[currentSceneId].title = e.target.value;
-        document.getElementById(`tab-${currentSceneId}`).innerText = `📄 ` + e.target.value;
-    });
-
-    // 3. 우측 표 편집 시 저장
-    tableBody.addEventListener('input', () => {
-        if(currentSceneId) scenes[currentSceneId].tableHtml = tableBody.innerHTML;
-    });
-
-    // 4. 라이브 모드 전환
-    window.switchToLive = function() {
-        if (loaderUi.style.display !== 'none') return;
-        saveCurrentSceneState();
-        currentSceneId = null;
-        
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        tabLive.classList.add('active');
-        
-        sceneIframe.style.display = 'none';
-        interactionLayer.style.display = 'none';
-        liveIframe.style.display = 'block';
-        
-        specEditorWrap.style.display = 'none';
-        guideScreen.style.display = 'flex';
-        
-        btnCapture.style.display = 'block';
-        btnAddBox.classList.remove('show');
-        statusText.innerText = '← 라이브 모드입니다. 화면을 조작한 뒤 캡처 버튼을 누르세요.';
+      }catch(e){}
     }
-
-    // 5. 기획서 페이지 전환
-    window.switchToScene = function(sceneId) {
-        saveCurrentSceneState();
-        currentSceneId = sceneId;
-        const sceneData = scenes[sceneId];
-        
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById(`tab-${sceneId}`).classList.add('active');
-        
-        liveIframe.style.display = 'none';
-        sceneIframe.srcdoc = sceneData.html; // 박제된 HTML 로드
-        sceneIframe.style.display = 'block';
-        
-        interactionLayer.innerHTML = sceneData.boxesHtml;
-        interactionLayer.style.display = 'block';
-        
-        guideScreen.style.display = 'none';
-        specEditorWrap.style.display = 'flex';
-        sceneTitleInput.value = sceneData.title;
-        tableBody.innerHTML = sceneData.tableHtml;
-        
-        btnCapture.style.display = 'none';
-        btnAddBox.classList.add('show');
-        statusText.innerText = '위 버튼을 눌러 빨간 박스를 추가하고 설명을 적으세요.';
+    const st=`${nT}_${nL}_${nW}_${nH}`;
+    if(lastBoxStates[id]!==st){
+      box.style.top=nT+'px';
+      box.style.left=nL+'px';
+      if(nW!=='') box.style.width=nW+'px';
+      if(nH!=='') box.style.height=nH+'px';
+      lastBoxStates[id]=st;
     }
+  });
+}
+(function loop(){syncBoxPositions();requestAnimationFrame(loop);})();
 
-    function saveCurrentSceneState() {
-        if (currentSceneId && scenes[currentSceneId]) {
-            scenes[currentSceneId].boxesHtml = interactionLayer.innerHTML;
-            scenes[currentSceneId].tableHtml = tableBody.innerHTML;
-        }
+safeEl('clear-html-btn')&&safeEl('clear-html-btn').addEventListener('click',()=>{
+  safeEl('file-upload').value='';safeEl('html-textarea').value='';
+});
+safeEl('clear-json-btn')&&safeEl('clear-json-btn').addEventListener('click',()=>{safeEl('json-upload').value='';});
+safeEl('file-upload')&&safeEl('file-upload').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=ev=>{safeEl('html-textarea').value=ev.target.result;};r.readAsText(f);
+});
+safeEl('json-upload')&&safeEl('json-upload').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d.scenes){
+        scenes=d.scenes;sceneCounter=d.sceneCounter||1;
+        loaderUi.style.display='none';showEditUI();
+        document.querySelectorAll('.tab:not(#tab-live)').forEach(t=>t.remove());
+        Object.keys(scenes).forEach(addTabForScene);
+        const first=Object.keys(scenes)[0];
+        if(first)switchToScene(first);else switchToLive();
+      }
+    }catch{alert('잘못된 설정 파일입니다.');}
+  };
+  r.readAsText(f);
+});
+safeEl('load-html-btn')&&safeEl('load-html-btn').addEventListener('click',()=>{
+  const code=safeEl('html-textarea').value;
+  if(!code.trim()){alert('HTML 코드를 붙여넣거나 파일을 업로드해주세요.');return;}
+  setIframeContent(liveIframe,code);
+  loaderUi.style.display='none';liveIframe.style.display='block';
+  showEditUI();showLiveTools();
+  guideScreen.innerHTML='<h3>🟢 라이브 모드</h3><p>좌측 화면을 조작한 뒤 <b>[📸 캡처]</b> 버튼을 누르세요.</p>';
+  statusText.innerText='라이브 모드 - 화면을 조작 후 캡처하세요.';
+});
+safeEl('edit-html-btn')&&safeEl('edit-html-btn').addEventListener('click',()=>{
+  saveState();currentSceneId=null;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  liveIframe.style.display=sceneIframe.style.display=interLayer.style.display='none';
+  specWrap.style.display=guideScreen.style.display='none';
+  loaderUi.style.display='flex';
+  ['capture-btn','add-blank-btn','dup-page-btn','del-page-btn','add-box-btn',
+   'tool-selector','toggle-boxes-btn','renumber-btn'].forEach(id=>{const e=safeEl(id);if(e)e.style.display='none';});
+  statusText.innerText='코드를 수정 후 [화면 렌더링 시작]을 누르세요.';
+});
+
+let dragSrcTabId=null;
+function addTabForScene(sceneId){
+  const sc=scenes[sceneId];
+  const tab=document.createElement('div');
+  tab.className='tab';tab.id=`tab-${sceneId}`;
+  tab.setAttribute('draggable','true');tab.dataset.sceneId=sceneId;
+  const dot=document.createElement('span');
+  dot.id=`tab-dot-${sceneId}`;dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#555;flex-shrink:0;';
+  updateTabDot(sceneId,sc.status||'none',dot);
+  const vdot=document.createElement('span');vdot.className='tab-ver-dot';vdot.id=`tab-ver-dot-${sceneId}`;
+  const label=document.createElement('span');label.id=`tab-label-${sceneId}`;label.innerText=`📄 ${sc.title}`;
+  tab.append(dot,vdot,label);
+  tab.addEventListener('click',()=>switchToScene(sceneId));
+  tab.addEventListener('dragstart',()=>{dragSrcTabId=sceneId;tab.style.opacity='.5';});
+  tab.addEventListener('dragend',()=>{tab.style.opacity='';document.querySelectorAll('.tab').forEach(t=>t.classList.remove('drag-over'));});
+  tab.addEventListener('dragover',e=>{e.preventDefault();tab.classList.add('drag-over');});
+  tab.addEventListener('dragleave',()=>tab.classList.remove('drag-over'));
+  tab.addEventListener('drop',e=>{
+    e.preventDefault();
+    if(!dragSrcTabId||dragSrcTabId===sceneId)return;
+    const keys=Object.keys(scenes);
+    const si=keys.indexOf(dragSrcTabId),ti=keys.indexOf(sceneId);
+    if(si<0||ti<0)return;
+    keys.splice(si,1);keys.splice(ti,0,dragSrcTabId);
+    const ns={};keys.forEach(k=>{ns[k]=scenes[k];});scenes=ns;
+    const src=safeEl(`tab-${dragSrcTabId}`),tgt=safeEl(`tab-${sceneId}`);
+    if(src&&tgt)tabContainer.insertBefore(src,ti>si?tgt.nextSibling:tgt);
+    tab.classList.remove('drag-over');updateThumbnailSidebar();
+  });
+  tabContainer.appendChild(tab);updateThumbnailSidebar();
+}
+function updateTabDot(sceneId,status,el){
+  const dot=el||safeEl(`tab-dot-${sceneId}`);if(!dot)return;
+  const c={none:'#555',reviewing:'#fbbf24','in-progress':'#3b82f6',done:'#10b981',hold:'#ef4444'};
+  dot.style.background=c[status]||'#555';
+}
+
+window.switchToLive=function(){
+  if(loaderUi&&loaderUi.style.display!=='none')return;
+  saveState();currentSceneId=null;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(tabLive)tabLive.classList.add('active');
+  sceneIframe.style.display=interLayer.style.display='none';
+  liveIframe.style.display='block';
+  specWrap.style.display='none';guideScreen.style.display='flex';
+  showLiveTools();
+  if(statusText)statusText.innerText='라이브 모드 - 화면을 조작 후 캡처하세요.';
+};
+
+window.switchToScene=function(sceneId){
+  if(loaderUi&&loaderUi.style.display!=='none')loaderUi.style.display='none';
+  saveState();
+  currentSceneId=sceneId;
+  const sd=scenes[sceneId];
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const tab=safeEl(`tab-${sceneId}`);if(tab)tab.classList.add('active');
+  liveIframe.style.display='none';
+  interLayer.innerHTML='';
+  lastBoxStates={};
+  boxAbsCoords=sd.boxAbsCoords?JSON.parse(JSON.stringify(sd.boxAbsCoords)):{};
+  setIframeContent(sceneIframe,sd.html);
+  sceneIframe.style.display='block';
+  interLayer.innerHTML=sd.boxesHtml||'';
+  interLayer.style.display='block';
+  interLayer.classList.remove('boxes-hidden');
+  const tbBtn=safeEl('toggle-boxes-btn');
+  if(tbBtn){tbBtn.innerText='👁 박스 숨기기';tbBtn.classList.remove('hidden-mode');}
+  setTimeout(syncBoxPositions,80);setTimeout(syncBoxPositions,350);
+  guideScreen.style.display='none';specWrap.style.display='flex';
+  titleInput.value=sd.title;
+  tableBody.innerHTML=sd.tableHtml||'';
+  pageMemoText.value=sd.memo||'';
+  pageMemoArea.classList.remove('visible');
+  renderStatusTags(sd.status||'none');
+  rebuildVersionSelector(sd);
+  currentVerKey=sd.activeVersion||Object.keys(sd.versions||{})[0]||'v1';
+  versionSel.value=currentVerKey;
+  if(!window.IS_EXPORTED_HTML){showSceneTools();if(statusText)statusText.innerText='도구로 박스를 추가하거나 우측 표에 내용을 작성하세요.';}
+  updateThumbnailSidebar();
+};
+
+function saveState(){
+  if(!currentSceneId||!scenes[currentSceneId])return;
+  const sd=scenes[currentSceneId];
+  sd.boxesHtml=interLayer.innerHTML;
+  sd.tableHtml=tableBody.innerHTML;
+  sd.memo=pageMemoText.value;
+  sd.boxAbsCoords=JSON.parse(JSON.stringify(boxAbsCoords));
+  if(!sd.versions)sd.versions={};
+  if(!sd.versions[currentVerKey])sd.versions[currentVerKey]={};
+  sd.versions[currentVerKey].tableHtml=tableBody.innerHTML;
+  sd.versions[currentVerKey].boxesHtml=interLayer.innerHTML;
+  sd.versions[currentVerKey].boxAbsCoords=JSON.parse(JSON.stringify(boxAbsCoords));
+  try{if(sceneIframe.contentDocument)sd.html=sceneIframe.contentDocument.documentElement.outerHTML;}catch(e){}
+}
+window.saveStatePublic=saveState;
+
+titleInput&&titleInput.addEventListener('input',e=>{
+  if(!currentSceneId)return;
+  scenes[currentSceneId].title=e.target.value;
+  const lbl=safeEl(`tab-label-${currentSceneId}`);if(lbl)lbl.innerText=`📄 ${e.target.value}`;
+  updateThumbnailSidebar();
+});
+tableBody&&tableBody.addEventListener('input',()=>{
+  if(!currentSceneId)return;
+  scenes[currentSceneId].tableHtml=tableBody.innerHTML;
+  if(scenes[currentSceneId].versions?.[currentVerKey])
+    scenes[currentSceneId].versions[currentVerKey].tableHtml=tableBody.innerHTML;
+});
+safeEl('toggle-memo-btn')&&safeEl('toggle-memo-btn').addEventListener('click',()=>{
+  pageMemoArea.classList.toggle('visible');
+  safeEl('toggle-memo-btn').style.background=pageMemoArea.classList.contains('visible')?'#fbbf24':'#fef3c7';
+});
+pageMemoText&&pageMemoText.addEventListener('input',()=>{if(currentSceneId)scenes[currentSceneId].memo=pageMemoText.value;});
+
+function setPageStatus(status){
+  if(!currentSceneId)return;
+  scenes[currentSceneId].status=status;
+  renderStatusTags(status);updateTabDot(currentSceneId,status);updateThumbnailSidebar();
+}
+function renderStatusTags(active){
+  document.querySelectorAll('.status-tag').forEach(el=>el.classList.toggle('active-tag',el.dataset.status===active));
+}
+window.setPageStatus=setPageStatus;
+
+function rebuildVersionSelector(sd){
+  if(!sd.versions||Object.keys(sd.versions).length===0){
+    const vk='v'+Date.now();
+    sd.versions={[vk]:{label:'v1 (최초)',tableHtml:'',boxesHtml:'',boxAbsCoords:{}}};
+    sd.activeVersion=vk;
+  }
+  versionSel.innerHTML='';
+  Object.keys(sd.versions).forEach(vk=>{
+    const opt=document.createElement('option');
+    opt.value=vk;opt.innerText=sd.versions[vk].label||vk;
+    versionSel.appendChild(opt);
+  });
+  const vdot=safeEl(`tab-ver-dot-${currentSceneId}`);
+  if(vdot)vdot.style.display=Object.keys(sd.versions).length>1?'block':'none';
+}
+window.addNewVersion=function(){
+  if(!currentSceneId)return;saveState();
+  const sd=scenes[currentSceneId];if(!sd.versions)sd.versions={};
+  const n=Object.keys(sd.versions).length+1;
+  const label=prompt('새 버전 이름을 입력하세요.',`v${n}`);if(!label)return;
+  const vk='v'+Date.now();
+  sd.versions[vk]={label,tableHtml:tableBody.innerHTML,boxesHtml:interLayer.innerHTML,boxAbsCoords:JSON.parse(JSON.stringify(boxAbsCoords))};
+  sd.activeVersion=vk;currentVerKey=vk;
+  rebuildVersionSelector(sd);versionSel.value=vk;
+};
+window.deleteVersion=function(){
+  if(!currentSceneId)return;
+  const sd=scenes[currentSceneId];if(!sd.versions)return;
+  const vkeys=Object.keys(sd.versions);
+  if(vkeys.length<=1){alert('마지막 버전은 삭제할 수 없습니다.');return;}
+  if(!confirm(`"${sd.versions[currentVerKey]?.label||currentVerKey}" 버전을 삭제하시겠습니까?`))return;
+  delete sd.versions[currentVerKey];
+  currentVerKey=Object.keys(sd.versions)[0];sd.activeVersion=currentVerKey;
+  switchVersion(currentVerKey);rebuildVersionSelector(sd);
+};
+window.switchVersion=function(vk){
+  if(!currentSceneId)return;saveState();
+  const sd=scenes[currentSceneId];if(!sd.versions?.[vk])return;
+  currentVerKey=vk;sd.activeVersion=vk;
+  tableBody.innerHTML=sd.versions[vk].tableHtml||'';
+  interLayer.innerHTML=sd.versions[vk].boxesHtml||'';
+  boxAbsCoords=sd.versions[vk].boxAbsCoords?JSON.parse(JSON.stringify(sd.versions[vk].boxAbsCoords)):{};
+  lastBoxStates={};
+  if(statusText)statusText.innerText=`버전 "${sd.versions[vk].label||vk}"로 전환됐습니다.`;
+};
+
+safeEl('capture-btn')&&safeEl('capture-btn').addEventListener('click',()=>{
+  let snap='';
+  try{
+    const doc=liveIframe.contentDocument,win=liveIframe.contentWindow;
+    doc.querySelectorAll('input').forEach(el=>{
+      if(el.type==='checkbox'||el.type==='radio'){if(el.checked)el.setAttribute('checked','checked');else el.removeAttribute('checked');}
+      else el.setAttribute('value',el.value||'');
+    });
+    doc.querySelectorAll('textarea').forEach(el=>{el.textContent=el.value;});
+    const sx=win.scrollX||0,sy=win.scrollY||0;
+    snap=doc.documentElement.outerHTML+`<script>window.addEventListener('load',()=>window.scrollTo(${sx},${sy}));<\/script>`;
+  }catch{alert('보안 정책으로 캡처에 실패했습니다.');return;}
+  createScene(`페이지 ${sceneCounter}`,snap);
+});
+safeEl('add-blank-btn')&&safeEl('add-blank-btn').addEventListener('click',()=>{
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#f4f4f6;padding:20px;"><div style="width:100%;min-height:800px;background:#fff;padding:40px;box-sizing:border-box;font-family:'Noto Sans KR',sans-serif;border-radius:8px;" contenteditable="true"><h1 style="color:#222;border-bottom:2px solid #ddd;padding-bottom:10px;outline:none;margin-top:0;">빈 기획 페이지</h1><div style="color:#444;min-height:500px;font-size:14px;line-height:1.8;">내용을 작성하세요.</div></div></body></html>`;
+  createScene(`빈 페이지 ${sceneCounter}`,html);
+});
+function createScene(title,html){
+  const sid='scene_'+Date.now(),initVk='v'+Date.now();
+  scenes[sid]={id:sid,title,html,boxesHtml:'',tableHtml:'',status:'none',memo:'',boxAbsCoords:{},
+    versions:{[initVk]:{label:'v1 (최초)',tableHtml:'',boxesHtml:'',boxAbsCoords:{}}},activeVersion:initVk};
+  addTabForScene(sid);sceneCounter++;switchToScene(sid);
+}
+safeEl('dup-page-btn')&&safeEl('dup-page-btn').addEventListener('click',()=>{
+  if(!currentSceneId)return;saveState();
+  const src=scenes[currentSceneId],newId='scene_'+Date.now();
+  scenes[newId]=JSON.parse(JSON.stringify(src));
+  scenes[newId].id=newId;scenes[newId].title=src.title+' (복사본)';
+  addTabForScene(newId);sceneCounter++;switchToScene(newId);
+});
+safeEl('del-page-btn')&&safeEl('del-page-btn').addEventListener('click',()=>{
+  if(!currentSceneId)return;
+  if(!confirm('현재 페이지를 삭제하시겠습니까?'))return;
+  const delId=currentSceneId;currentSceneId=null;
+  delete scenes[delId];const t=safeEl(`tab-${delId}`);if(t)t.remove();
+  const rem=Object.keys(scenes);
+  if(rem.length>0)switchToScene(rem[0]);else switchToLive();
+  updateThumbnailSidebar();
+});
+
+safeEl('toggle-sidebar-btn')&&safeEl('toggle-sidebar-btn').addEventListener('click',()=>{
+  const sb=safeEl('thumbnail-sidebar');sb.classList.toggle('visible');
+  if(sb.classList.contains('visible'))updateThumbnailSidebar();
+});
+window.closeSidebar=()=>safeEl('thumbnail-sidebar').classList.remove('visible');
+function updateThumbnailSidebar(){
+  const sb=safeEl('thumbnail-sidebar');if(!sb||!sb.classList.contains('visible'))return;
+  const list=safeEl('thumbnail-list');list.innerHTML='';
+  const W=176,scale=W/480,H=Math.round(800*scale);
+  const sc2px={none:'#555',reviewing:'#fbbf24','in-progress':'#3b82f6',done:'#10b981',hold:'#ef4444'};
+  Object.keys(scenes).forEach(sid=>{
+    const sc=scenes[sid];
+    const item=document.createElement('div');
+    item.className='thumb-item'+(sid===currentSceneId?' active':'');
+    item.onclick=()=>switchToScene(sid);
+    item.innerHTML=`<div class="thumb-preview" style="height:${H}px;"><iframe srcdoc="${escH(sc.html)}" style="width:480px;height:800px;transform:scale(${scale});transform-origin:top left;border:none;pointer-events:none;display:block;"></iframe></div><div class="thumb-label" style="border-left:3px solid ${sc2px[sc.status||'none']};">${sc.title}</div>`;
+    list.appendChild(item);
+  });
+}
+function escH(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+safeEl('toggle-boxes-btn')&&safeEl('toggle-boxes-btn').addEventListener('click',()=>{
+  interLayer.classList.toggle('boxes-hidden');
+  const h=interLayer.classList.contains('boxes-hidden');
+  const btn=safeEl('toggle-boxes-btn');
+  if(btn){btn.innerText=h?'👁 박스 보이기':'👁 박스 숨기기';btn.classList.toggle('hidden-mode',h);}
+});
+
+function addShape(toolType,absTop,absLeft,width,height,path=null,ofsX=0,ofsY=0,matchSize=false){
+  const uid=Date.now().toString();
+  const box=document.createElement('div');
+  box.id='box-'+uid;
+  boxAbsCoords[uid]={top:absTop,left:absLeft,path,ofsX,ofsY,matchSize};
+  let sy=0,sx=0;
+  try{
+    const cw=sceneIframe.contentWindow;const cd=sceneIframe.contentDocument;
+    sy=cw.scrollY||(cd&&cd.documentElement.scrollTop)||(cd&&cd.body&&cd.body.scrollTop)||0;
+    sx=cw.scrollX||(cd&&cd.documentElement.scrollLeft)||(cd&&cd.body&&cd.body.scrollLeft)||0;
+  }catch(e){}
+  box.style.top=(absTop-sy)+'px';box.style.left=(absLeft-sx)+'px';
+  box.style.width=typeof width==='number'?width+'px':width;
+  if(height!=='auto')box.style.height=typeof height==='number'?height+'px':height;
+  if(toolType==='number-box'||toolType==='auto-box'){
+    const cnt=interLayer.querySelectorAll('.red-box').length+1;
+    box.className='red-box';
+    box.innerHTML=`<div class="red-badge" data-box-id="${uid}">${cnt}</div><div class="box-copy-btn" data-action="copy" data-box-id="${uid}" title="복사">⧉</div><div class="box-del-btn" data-action="del" data-box-id="${uid}" title="삭제">✖</div>`;
+    const tbody=document.createElement('tbody');
+    tbody.id='row-'+uid;
+    tbody.innerHTML=buildRow(uid,cnt);
+    tableBody.appendChild(tbody);
+  }else if(toolType==='highlight-box'){
+    box.className='highlight-box';
+    box.innerHTML=`<div class="drag-handle" data-box-id="${uid}">✥</div><div class="box-copy-btn" data-action="copy" data-box-id="${uid}" title="복사">⧉</div><div class="box-del-btn" data-action="del" data-box-id="${uid}" title="삭제">✖</div>`;
+  }else if(toolType==='text-box'){
+    box.className='text-box';
+    box.innerHTML=`<div class="drag-handle" data-box-id="${uid}">✥</div><div class="box-copy-btn" data-action="copy" data-box-id="${uid}" title="복사">⧉</div><div class="box-del-btn" data-action="del" data-box-id="${uid}" title="삭제">✖</div><div contenteditable="true" style="width:100%;min-height:30px;margin-top:22px;border:none;background:transparent;">내용 입력</div>`;
+  }
+  interLayer.appendChild(box);
+  saveState();
+}
+function buildRow(uid,cnt){
+  return `<tr class="spec-title-row"><th>정의</th><td><span class="badge-inline">${cnt}</span><span contenteditable="true" style="border-bottom:1px dashed #d93025;font-weight:800;">기능 제목을 적으세요</span></td><th style="width:82px;padding:4px;"><div class="row-btns"><button class="btn-del-box" onclick="deleteBox('${uid}')">🗑 삭제</button><button class="btn-add-row" onclick="addTableRow('${uid}')">+ 행추가</button><button class="btn-img-attach" onclick="openImgAttach('${uid}')">🖼 이미지</button><button class="btn-link" onclick="openLinkModal('${uid}')">🔗 링크<span class="link-hint">Ctrl+K</span></button></div></th></tr><tr><th><span class="row-drag-handle">⠿</span>01</th><td colspan="2"><div contenteditable="true" style="min-height:20px;">상세 기능 설명을 적으세요.</div></td></tr><tr><th><span class="row-drag-handle">⠿</span>비고</th><td colspan="2"><div contenteditable="true" style="min-height:20px;">비고사항</div></td></tr>`;
+}
+
+interLayer.addEventListener('click',e=>{
+  const delBtn=e.target.closest('[data-action="del"]');
+  if(delBtn){deleteBox(delBtn.dataset.boxId);return;}
+  const copyBtn=e.target.closest('[data-action="copy"]');
+  if(copyBtn){copyBox(copyBtn.dataset.boxId);return;}
+  const badge=e.target.closest('.red-badge');
+  if(badge){
+    const boxId=badge.dataset.boxId||badge.closest('.red-box')?.id.replace('box-','');
+    if(!boxId)return;
+    const grp=safeEl('row-'+boxId);if(!grp)return;
+    const firstTr=grp.querySelector('tr');if(!firstTr)return;
+    tableScroll.scrollTo({top:firstTr.offsetTop-8,behavior:'smooth'});
+    grp.querySelectorAll('tr').forEach(tr=>{tr.classList.remove('row-highlight');void tr.offsetWidth;tr.classList.add('row-highlight');});
+    setTimeout(()=>grp.querySelectorAll('tr').forEach(tr=>tr.classList.remove('row-highlight')),1700);
+    return;
+  }
+});
+
+tableBody&&tableBody.addEventListener('click',e=>{
+  const titleTd=e.target.closest('.spec-title-row td');
+  if(!titleTd)return;
+  const tbody=titleTd.closest('tbody[id^="row-"]');
+  if(!tbody)return;
+  const boxId=tbody.id.replace('row-','');
+  const box=safeEl('box-'+boxId);
+  const coords=boxAbsCoords[boxId];
+  if(!box||!coords)return;
+  try{
+    const iframeH=sceneIframe.contentWindow.innerHeight||600;
+    const targetScrollY=Math.max(0,coords.top-iframeH/2+(box.offsetHeight||50)/2);
+    sceneIframe.contentWindow.scrollTo({top:targetScrollY,behavior:'smooth'});
+  }catch(err){}
+  box.style.outline='3px solid #f59e0b';
+  box.style.outlineOffset='2px';
+  setTimeout(()=>{box.style.outline='';box.style.outlineOffset='';},1500);
+});
+
+safeEl('add-box-btn')&&safeEl('add-box-btn').addEventListener('click',()=>{
+  if(!currentSceneId)return;
+  isSelecting=true;mockup.classList.add('select-mode-active');
+  const tool=safeEl('tool-selector').value;
+  if(tool==='auto-box'){
+    statusText.innerText='👉 마우스를 요소 위에 올린 후 클릭하세요.';statusText.style.color='#3b82f6';
+    addOverlay.style.display='none';
+    const doc=sceneIframe.contentDocument;if(!doc)return;
+    let hoverEl=doc.getElementById('f12-hover-el');
+    if(!hoverEl){hoverEl=doc.createElement('div');hoverEl.id='f12-hover-el';hoverEl.style.cssText='position:fixed;z-index:9999999;border:2px dashed #3b82f6;background:rgba(59,130,246,.15);pointer-events:none;display:none;';doc.body.appendChild(hoverEl);}
+    let activeEl=null;
+    const onMove=e=>{
+      const el=doc.elementFromPoint(e.clientX,e.clientY);
+      if(el&&el!==doc.body&&el!==doc.documentElement&&el.id!=='f12-hover-el'){
+        activeEl=el;const r=el.getBoundingClientRect();
+        Object.assign(hoverEl.style,{top:r.top+'px',left:r.left+'px',width:r.width+'px',height:r.height+'px',display:'block'});
+      }else{hoverEl.style.display='none';activeEl=null;}
+    };
+    const onClick=e=>{
+      e.preventDefault();e.stopPropagation();
+      doc.removeEventListener('mousemove',onMove);doc.removeEventListener('click',onClick,true);
+      hoverEl.style.display='none';
+      mockup.classList.remove('select-mode-active');isSelecting=false;
+      statusText.innerText='박스가 추가됐습니다.';statusText.style.color='#aaa';
+      if(activeEl){
+        const r=activeEl.getBoundingClientRect();
+        let sy=0,sx=0;
+        try{
+          const cw=sceneIframe.contentWindow;const cd=sceneIframe.contentDocument;
+          sy=cw.scrollY||(cd&&cd.documentElement.scrollTop)||(cd&&cd.body&&cd.body.scrollTop)||0;
+          sx=cw.scrollX||(cd&&cd.documentElement.scrollLeft)||(cd&&cd.body&&cd.body.scrollLeft)||0;
+        }catch(er){}
+        const path=getElementPath(activeEl);
+        addShape('auto-box',r.top+sy,r.left+sx,r.width,r.height,path,0,0,true);
+      }
+    };
+    doc.addEventListener('mousemove',onMove);doc.addEventListener('click',onClick,true);
+  }else{
+    statusText.innerText='👉 배치할 위치를 클릭하세요.';statusText.style.color='#ff8a80';
+    addOverlay.style.display='block';
+  }
+});
+addOverlay.addEventListener('click',e=>{
+  if(!isSelecting)return;
+  mockup.classList.remove('select-mode-active');isSelecting=false;
+  addOverlay.style.display='none';
+  statusText.innerText='박스가 추가됐습니다.';statusText.style.color='#aaa';
+  const tool=safeEl('tool-selector').value;
+  const rect=mockup.getBoundingClientRect();
+  let sy=0,sx=0,cd=null;
+  try{
+    const cw=sceneIframe.contentWindow;cd=sceneIframe.contentDocument;
+    sy=cw.scrollY||(cd&&cd.documentElement.scrollTop)||(cd&&cd.body&&cd.body.scrollTop)||0;
+    sx=cw.scrollX||(cd&&cd.documentElement.scrollLeft)||(cd&&cd.body&&cd.body.scrollLeft)||0;
+  }catch(er){}
+  const iframeRect=sceneIframe.getBoundingClientRect();
+  const ifX=e.clientX-iframeRect.left,ifY=e.clientY-iframeRect.top;
+  let targetEl=null;
+  try{if(cd)targetEl=cd.elementFromPoint(ifX,ifY);}catch(er){}
+  const absTop=(e.clientY-rect.top+mockup.scrollTop+sy)-20;
+  const absLeft=(e.clientX-rect.left+mockup.scrollLeft+sx)-50;
+  let path=null,ofsX=0,ofsY=0;
+  if(targetEl){
+    path=getElementPath(targetEl);
+    const tRect=targetEl.getBoundingClientRect();
+    ofsX=(absLeft-sx)-tRect.left;
+    ofsY=(absTop-sy)-tRect.top;
+  }
+  let w='100px',h='40px';
+  if(tool==='highlight-box'){w='120px';h='80px';}else if(tool==='text-box'){w='150px';h='auto';}
+  addShape(tool,absTop,absLeft,w,h,path,ofsX,ofsY,false);
+});
+
+window.deleteBox=function(boxId){
+  const box=safeEl('box-'+boxId);if(box)box.remove();
+  const row=safeEl('row-'+boxId);if(row)row.remove();
+  delete boxAbsCoords[boxId];saveState();
+};
+window.copyBox=function(boxId){
+  const srcBox=safeEl('box-'+boxId);if(!srcBox)return;
+  const c=boxAbsCoords[boxId];
+  const newTop=(c?c.top:0)+24,newLeft=(c?c.left:0)+24;
+  let toolType='highlight-box';
+  if(srcBox.classList.contains('red-box'))toolType='number-box';
+  else if(srcBox.classList.contains('text-box'))toolType='text-box';
+  addShape(toolType,newTop,newLeft,parseInt(srcBox.style.width)||100,srcBox.style.height==='auto'?'auto':parseInt(srcBox.style.height)||40);
+};
+window.addTableRow=function(boxId){
+  const grp=safeEl('row-'+boxId);if(!grp)return;
+  const trs=grp.querySelectorAll('tr');
+  const n=trs.length-1;
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<th><span class="row-drag-handle">⠿</span>${String(n).padStart(2,'0')}</th><td colspan="2"><div contenteditable="true" style="min-height:20px;">내용을 입력하세요.</div></td>`;
+  grp.insertBefore(tr,trs[trs.length-1]);saveState();
+};
+tableBody&&tableBody.addEventListener('mousedown',e=>{
+  const handle=e.target.closest('.row-drag-handle');if(!handle)return;
+  const srcTr=handle.closest('tr');if(!srcTr||srcTr.classList.contains('spec-title-row'))return;
+  const srcTbody=srcTr.closest('tbody');if(!srcTbody)return;
+  e.preventDefault();
+  srcTr.style.opacity='0.3';
+  const ph=document.createElement('tr');ph.id='__drag-ph__';
+  const phTd=document.createElement('td');phTd.colSpan=3;
+  phTd.style.cssText='padding:0;height:3px;background:#4f46e5;';ph.appendChild(phTd);
+  function getTrAtPoint(x,y){
+    srcTr.style.visibility='hidden';
+    const el=document.elementFromPoint(x,y);
+    srcTr.style.visibility='';
+    if(!el)return null;
+    const tr=el.closest('tr');
+    if(!tr||tr===srcTr||tr===ph||tr.classList.contains('spec-title-row'))return null;
+    if(tr.closest('tbody')!==srcTbody)return null;
+    return tr;
+  }
+  const onMove=ev=>{
+    const overTr=getTrAtPoint(ev.clientX,ev.clientY);if(!overTr)return;
+    const rect=overTr.getBoundingClientRect();
+    if(ev.clientY<rect.top+rect.height/2)overTr.parentNode.insertBefore(ph,overTr);
+    else overTr.parentNode.insertBefore(ph,overTr.nextSibling);
+  };
+  const onUp=()=>{
+    document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);
+    srcTr.style.opacity='';
+    if(ph.parentNode){ph.parentNode.insertBefore(srcTr,ph);ph.remove();}
+    saveState();
+  };
+  document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+});
+
+window.openImgAttach=function(boxId){currentImgBoxId=boxId;safeEl('global-img-input').click();};
+safeEl('global-img-input')&&safeEl('global-img-input').addEventListener('change',e=>{
+  const files=[...e.target.files];
+  if(!files.length||!currentImgBoxId)return;
+  const grp=safeEl('row-'+currentImgBoxId);if(!grp)return;
+  const trs=grp.querySelectorAll('tr');
+  const refTr=trs[trs.length-1];
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const uid=Date.now().toString()+'_'+Math.random().toString(36).slice(2);
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<th><span class="row-drag-handle">⠿</span>이미지</th><td colspan="2"><div class="img-block" id="imgblock-${uid}"><img src="${ev.target.result}" id="img-${uid}" style="width:200px;"><button class="img-block-del" onclick="this.closest('tr').remove();saveStatePublic()" title="이미지 삭제">✕</button><div class="img-resize-handle tl" data-uid="${uid}" data-corner="tl"></div><div class="img-resize-handle tr" data-uid="${uid}" data-corner="tr"></div><div class="img-resize-handle bl" data-uid="${uid}" data-corner="bl"></div><div class="img-resize-handle br" data-uid="${uid}" data-corner="br"></div></div></td>`;
+      grp.insertBefore(tr,refTr);saveState();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value='';
+});
+document.addEventListener('mousedown',e=>{
+  const handle=e.target.closest('.img-resize-handle');if(!handle)return;
+  const uid=handle.dataset.uid,corner=handle.dataset.corner;
+  const img=safeEl('img-'+uid);if(!img)return;
+  const startX=e.clientX,startW=img.offsetWidth;
+  e.preventDefault();
+  const onMove=ev=>{
+    const dx=ev.clientX-startX;
+    const newW=(corner==='br'||corner==='tr')?Math.max(40,startW+dx):Math.max(40,startW-dx);
+    img.style.width=newW+'px';img.style.height='auto';
+  };
+  const onUp=()=>{document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);saveState();};
+  document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+});
+
+window.onLinkTypeChange=function(){
+  const t=safeEl('link-type').value;
+  safeEl('link-url-wrap').style.display=t==='url'?'block':'none';
+  safeEl('link-page-wrap').style.display=t==='page'?'block':'none';
+};
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){
+    const active=document.activeElement;
+    if(active&&active.contentEditable==='true'){
+      const td=active.closest('td');
+      const tbody=active.closest('tbody[id^="row-"]');
+      if(td&&tbody){e.preventDefault();linkTargetCE=active;openLinkModal(tbody.id.replace('row-',''),active);}
     }
-
-    // 6. 빨간 박스 그리기
-    btnAddBox.addEventListener('click', () => {
-        if(!currentSceneId) return;
-        isSelecting = true;
-        mockup.classList.add('select-mode-active');
-        statusText.innerText = '👉 좌측 멈춰진 화면에서 설명할 위치를 마우스로 클릭하세요!';
-        statusText.style.color = '#ff8a80';
+  }
+});
+window.openLinkModal=function(boxId,targetCE){
+  currentLinkBoxId=boxId;linkTargetCE=targetCE||null;
+  const sel=safeEl('link-page-sel');sel.innerHTML='';
+  Object.keys(scenes).forEach(sid=>{
+    if(sid===currentSceneId)return;
+    const opt=document.createElement('option');opt.value=sid;opt.innerText=scenes[sid].title;
+    sel.appendChild(opt);
+  });
+  const rowSel=safeEl('link-row-sel');rowSel.innerHTML='';
+  const grp=safeEl('row-'+boxId);
+  if(grp){
+    grp.querySelectorAll('tr:not(.spec-title-row)').forEach((tr,idx)=>{
+      const opt=document.createElement('option');opt.value=idx;
+      const thText=(tr.querySelector('th')?tr.querySelector('th').innerText.replace(/⠿/g,'').trim():`행 ${idx+1}`);
+      const tdText=tr.querySelector('td div')?tr.querySelector('td div').innerText.slice(0,18):'';
+      opt.innerText=`${thText}: ${tdText}`;rowSel.appendChild(opt);
     });
+  }
+  if(linkTargetCE){
+    const parentTr=linkTargetCE.closest('tr');
+    if(parentTr&&grp){
+      const contentTrs=[...grp.querySelectorAll('tr:not(.spec-title-row)')];
+      const idx=contentTrs.indexOf(parentTr);
+      if(idx>=0)rowSel.value=idx;
+    }
+  }
+  safeEl('link-label').value='';safeEl('link-url').value='';
+  safeEl('link-type').value='url';onLinkTypeChange();
+  safeEl('link-overlay').style.display='block';
+  safeEl('link-modal').style.display='block';
+  setTimeout(()=>safeEl('link-label').focus(),50);
+};
+window.closeLinkModal=function(){
+  safeEl('link-overlay').style.display='none';
+  safeEl('link-modal').style.display='none';
+  linkTargetCE=null;
+};
+window.applyLink=function(){
+  const label=safeEl('link-label').value.trim()||'링크';
+  const type=safeEl('link-type').value;
+  let href='#',onclickAttr='';
+  if(type==='url')href=safeEl('link-url').value.trim()||'#';
+  else{const tid=safeEl('link-page-sel').value;onclickAttr=`event.preventDefault();switchToScene('${tid}')`;}
+  const grp=safeEl('row-'+currentLinkBoxId);if(!grp){closeLinkModal();return;}
+  const rowIdx=parseInt(safeEl('link-row-sel').value);
+  const contentTrs=grp.querySelectorAll('tr:not(.spec-title-row)');
+  const targetTr=contentTrs[rowIdx];if(!targetTr){closeLinkModal();return;}
+  const td=targetTr.querySelector('td');if(!td){closeLinkModal();return;}
+  let linkArea=td.querySelector('.td-link-area');
+  if(!linkArea){linkArea=document.createElement('div');linkArea.className='td-link-area';td.appendChild(linkArea);}
+  const chip=document.createElement('span');
+  chip.className='inline-link-chip';chip.contentEditable='false';
+  chip.innerHTML=`<a class="link-item" href="${href}" target="${type==='url'?'_blank':'_self'}" ${onclickAttr?`onclick="${onclickAttr}"`:''}>${label}</a><button class="lk-del" onclick="this.parentElement.remove();saveStatePublic()" title="링크 삭제">✕</button>`;
+  linkArea.appendChild(chip);
+  saveState();closeLinkModal();
+};
 
-    interactionLayer.addEventListener('click', (e) => {
-        if (!isSelecting) return;
-        
-        mockup.classList.remove('select-mode-active');
-        isSelecting = false;
-        statusText.innerText = '위 버튼을 눌러 빨간 박스를 추가하고 설명을 적으세요.';
-        statusText.style.color = '#aaa';
-
-        const boxCount = interactionLayer.querySelectorAll('.red-box').length + 1;
-
-        const rect = mockup.getBoundingClientRect();
-        const top = e.clientY - rect.top + mockup.scrollTop - 20;
-        const left = e.clientX - rect.left + mockup.scrollLeft - 50;
-        
-        const box = document.createElement('div');
-        box.className = 'red-box';
-        box.style.top = top + 'px';
-        box.style.left = left + 'px';
-        box.style.width = '100px';
-        box.style.height = '40px';
-        box.innerHTML = `<div class="red-badge">${boxCount}</div>`;
-        interactionLayer.appendChild(box);
-
-        const tr = document.createElement('tbody');
-        tr.innerHTML = `
-            <tr class="spec-title-row">
-                <th>정의</th>
-                <td colspan="2"><span class="badge-inline">${boxCount}</span><span contenteditable="true" style="border-bottom:1px dashed #d93025; font-weight:800;">여기를 클릭해서 기능 제목을 적으세요</span></td>
-            </tr>
-            <tr>
-                <th>01</th>
-                <td colspan="2"><div contenteditable="true" style="min-height:20px;">상세 기능 설명을 적으세요. (엔터 시 줄바꿈)</div></td>
-            </tr>
-            <tr>
-                <th>비고</th>
-                <td colspan="2"><div contenteditable="true" style="min-height:20px;">비고사항 (필요 없으면 비워두세요)</div></td>
-            </tr>
-        `;
-        tableBody.appendChild(tr);
-        saveCurrentSceneState();
+safeEl('renumber-btn')&&safeEl('renumber-btn').addEventListener('click',openRenumberPanel);
+function openRenumberPanel(){
+  saveState();
+  const list=safeEl('renumber-list');list.innerHTML='';
+  interLayer.querySelectorAll('.red-box').forEach((box,i)=>{
+    const bid=box.id.replace('box-','');
+    const row=safeEl('row-'+bid);
+    let title='(제목 없음)';
+    if(row){const sp=row.querySelector('.spec-title-row td span[contenteditable]');if(sp)title=sp.innerText||title;}
+    const li=document.createElement('li');
+    li.setAttribute('draggable','true');li.dataset.boxId=box.id;
+    li.innerHTML=`<span class="num-badge">${i+1}</span><span>${title}</span>`;
+    list.appendChild(li);
+  });
+  let dlLi=null;
+  list.querySelectorAll('li').forEach(li=>{
+    li.addEventListener('dragstart',()=>dlLi=li);
+    li.addEventListener('dragover',e=>e.preventDefault());
+    li.addEventListener('drop',e=>{
+      e.preventDefault();if(!dlLi||dlLi===li)return;
+      const all=[...list.querySelectorAll('li')];
+      const si=all.indexOf(dlLi),ti=all.indexOf(li);
+      list.insertBefore(dlLi,si>ti?li:li.nextSibling);
+      list.querySelectorAll('li').forEach((l,idx)=>l.querySelector('.num-badge').innerText=idx+1);
     });
+  });
+  safeEl('renumber-overlay').style.display='block';
+  safeEl('renumber-panel').style.display='block';
+}
+window.closeRenumberPanel=function(){safeEl('renumber-overlay').style.display='none';safeEl('renumber-panel').style.display='none';};
+window.applyRenumber=function(){
+  safeEl('renumber-list').querySelectorAll('li').forEach((li,idx)=>{
+    const box=safeEl(li.dataset.boxId);if(!box)return;
+    const rb=box.querySelector('.red-badge');if(rb)rb.innerText=idx+1;
+    const bid=li.dataset.boxId.replace('box-','');
+    const row=safeEl('row-'+bid);
+    if(row){const ib=row.querySelector('.badge-inline');if(ib)ib.innerText=idx+1;interLayer.appendChild(box);tableBody.appendChild(row);}
+  });
+  saveState();closeRenumberPanel();
+};
 
-    // 7. 최종 결과물 다운로드 (Iframe 속성 고정 처리)
-    btnExport.addEventListener('click', () => {
-        saveCurrentSceneState();
-        switchToLive();
-        
-        // 다운로드용 HTML에 Iframe srcdoc 속성을 명시적으로 박아넣음
-        liveIframe.setAttribute('srcdoc', liveIframe.srcdoc);
-        sceneIframe.setAttribute('srcdoc', sceneIframe.srcdoc);
-        
-        const toolbar = document.getElementById('no-export-toolbar');
-        toolbar.style.display = 'none';
-        
-        const htmlContent = document.documentElement.outerHTML;
-        toolbar.style.display = 'flex';
+document.addEventListener('mousedown',e=>{
+  const badge=e.target.closest('.red-badge');
+  const handle=e.target.closest('.drag-handle');
+  const trigger=badge||handle;if(!trigger)return;
+  if(e.target.closest('.img-resize-handle'))return;
+  draggingBox=trigger.closest('.red-box,.highlight-box,.text-box');if(!draggingBox)return;
+  const rect=draggingBox.getBoundingClientRect();
+  dragOfsX=e.clientX-rect.left;dragOfsY=e.clientY-rect.top;
+  interLayer.classList.add('drag-active');
+  e.preventDefault();
+});
+document.addEventListener('mousemove',e=>{
+  if(!draggingBox)return;
+  const rect=mockup.getBoundingClientRect();
+  const newLeft=e.clientX-rect.left-dragOfsX;
+  const newTop=e.clientY-rect.top-dragOfsY;
+  draggingBox.style.left=newLeft+'px';
+  draggingBox.style.top=newTop+'px';
+});
+document.addEventListener('mouseup',()=>{
+  if(!draggingBox)return;
+  const bid=draggingBox.id.replace('box-','');
+  let sy=0,sx=0,cd=null;
+  try{
+    const cw=sceneIframe.contentWindow;cd=sceneIframe.contentDocument;
+    sy=cw.scrollY||(cd&&cd.documentElement.scrollTop)||(cd&&cd.body&&cd.body.scrollTop)||0;
+    sx=cw.scrollX||(cd&&cd.documentElement.scrollLeft)||(cd&&cd.body&&cd.body.scrollLeft)||0;
+  }catch(e){}
+  const screenLeft=parseFloat(draggingBox.style.left)||0;
+  const screenTop=parseFloat(draggingBox.style.top)||0;
+  draggingBox.style.display='none';
+  const iframeRect=sceneIframe.getBoundingClientRect();
+  const boxRect=draggingBox.getBoundingClientRect();
+  const ifX=(boxRect.left+boxRect.width/2)-iframeRect.left;
+  const ifY=(boxRect.top+boxRect.height/2)-iframeRect.top;
+  let targetEl=null;
+  try{if(cd)targetEl=cd.elementFromPoint(ifX,ifY);}catch(er){}
+  draggingBox.style.display='';
+  let path=null,ofsX=0,ofsY=0;
+  const matchSize=boxAbsCoords[bid]?.matchSize||false;
+  if(targetEl){
+    path=getElementPath(targetEl);
+    const tRect=targetEl.getBoundingClientRect();
+    ofsX=screenLeft-tRect.left;
+    ofsY=screenTop-tRect.top;
+  }
+  boxAbsCoords[bid]={top:screenTop+sy,left:screenLeft+sx,path,ofsX,ofsY,matchSize:false};
+  draggingBox=null;interLayer.classList.remove('drag-active');saveState();
+});
 
-        const blob = new Blob(['<!DOCTYPE html>\n' + htmlContent], { type: 'text/html' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = '화면정의서_완성본.html';
-        a.click();
-    });
+safeEl('exp-json-btn')&&safeEl('exp-json-btn').addEventListener('click',()=>{
+  saveState();
+  const blob=new Blob([JSON.stringify({scenes,sceneCounter},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download='PPT_기획서_설정.json';a.click();URL.revokeObjectURL(url);
+});
+
+safeEl('exp-html-btn')&&safeEl('exp-html-btn').addEventListener('click',function(){
+  saveState();
+  var originalHtml='';
+  try{originalHtml=liveIframe.contentDocument.documentElement.outerHTML;}catch(ex){}
+  if(!originalHtml){var fid=Object.keys(scenes)[0];if(fid)originalHtml=scenes[fid].html||'';}
+  var dataStr=JSON.stringify({scenes:scenes,sceneCounter:sceneCounter,originalHtml:originalHtml}).replace(/<\//g,'<\\/');
+  var css='';var sEl=document.querySelector('style');if(sEl)css=sEl.textContent||sEl.innerText||'';
+  var statusColors='{none:"#555",reviewing:"#fbbf24","in-progress":"#3b82f6",done:"#10b981",hold:"#ef4444"}';
+  var out=[
+    '<!DOCTYPE html>','<html lang="ko"><head>',
+    '<meta charset="UTF-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1.0">',
+    '<title>\uD654\uBA74 \uC815\uC758\uC11C \uBC30\uD3EC\uBCF8</title>',
+    '<style>',css,
+    '#dtab-bar{display:flex;background:#1a1a1a;overflow-x:auto;flex-shrink:0;}',
+    '.dtab{padding:10px 16px;color:#888;cursor:pointer;border-bottom:3px solid transparent;font-size:13px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:5px;}',
+    '.dtab:hover{color:#ddd;background:#252525;}',
+    '.dtab.active{color:#fff;border-bottom-color:#4f46e5;background:#222;}',
+    '.dtab.orig{color:#10b981;}.dtab.orig.active{border-bottom-color:#10b981;}',
+    '</style>','</head><body>',
+    '<div id="dtab-bar"></div>',
+    '<div class="main-wrap">',
+    '<div class="left-pane"><div id="app-mockup">',
+    '<iframe id="live-iframe" style="width:100%;height:100%;border:none;display:none;"></iframe>',
+    '<iframe id="scene-iframe" style="width:100%;height:100%;border:none;display:none;"></iframe>',
+    '<div id="scene-interaction-layer" style="position:absolute;inset:0;z-index:9998;display:none;pointer-events:none;overflow:hidden;"></div>',
+    '</div></div>',
+    '<div class="right-pane" id="rp">',
+    '<div class="guide-screen" id="gs"><h3>\uD398\uC774\uC9C0\uB97C \uC120\uD0DD\uD558\uC138\uC694</h3></div>',
+    '<div id="sw" style="display:none;flex-direction:column;height:100%;overflow:hidden;">',
+    '<div class="spec-header"><div class="spec-header-row"><span id="ttl" style="font-size:15px;font-weight:900;color:#222;padding:2px;flex:1;"></span></div></div>',
+    '<div class="spec-table-scroll" id="spec-table-scroll"><table class="spec-table" id="spec-table-body"></table></div>',
+    '</div></div></div>',
+    '<script>',
+    '(function(){',
+    'var D='+dataStr+';',
+    'var scenes=D.scenes,origHtml=D.originalHtml;',
+    'var cur=null,coords={};',
+    'var sIf=document.getElementById("scene-iframe");',
+    'var lIf=document.getElementById("live-iframe");',
+    'var il=document.getElementById("scene-interaction-layer");',
+    'var tb=document.getElementById("spec-table-body");',
+    'var sw=document.getElementById("sw");',
+    'var gs=document.getElementById("gs");',
+    'var ttl=document.getElementById("ttl");',
+    'var bar=document.getElementById("dtab-bar");',
+    'var rp=document.getElementById("rp");',
+    'var sc='+statusColors+';',
+    'var ot=document.createElement("div");',
+    'ot.className="dtab orig";ot.textContent="\\uD83C\\uDF10 \\uC6D0\\uBCF8 \\uD654\\uBA74";',
+    'ot.onclick=function(){showOrig();};bar.appendChild(ot);',
+    'Object.keys(scenes).forEach(function(sid){',
+    '  var s=scenes[sid];',
+    '  var t=document.createElement("div");t.className="dtab";t.id="dt"+sid;',
+    '  var d=document.createElement("span");',
+    '  d.style.cssText="width:8px;height:8px;border-radius:50%;background:"+(sc[s.status||"none"]||"#555")+";flex-shrink:0;";',
+    '  t.appendChild(d);t.appendChild(document.createTextNode("\\uD83D\\uDCC4 "+s.title));',
+    '  t.onclick=(function(id){return function(){go(id);};})(sid);',
+    '  bar.appendChild(t);',
+    '});',
+    'var lastSt={};',
+    '(function loop(){',
+    '  var sy=0,sx=0,cd=null;',
+    '  try{var cw=sIf.contentWindow;cd=sIf.contentDocument;',
+    '    sy=cw.scrollY||(cd&&cd.documentElement.scrollTop)||(cd&&cd.body&&cd.body.scrollTop)||0;',
+    '    sx=cw.scrollX||(cd&&cd.documentElement.scrollLeft)||(cd&&cd.body&&cd.body.scrollLeft)||0;',
+    '  }catch(e){}',
+    '  il.querySelectorAll(".red-box,.highlight-box,.text-box").forEach(function(b){',
+    '    var id=b.id.replace("box-","");var c=coords[id];if(!c)return;',
+    '    var nT=c.top-sy,nL=c.left-sx,nW="",nH="";',
+    '    if(c.path&&cd){try{var el=cd.querySelector(c.path);',
+    '      if(el){var r=el.getBoundingClientRect();',
+    '        if(r.width>0||r.height>0){nT=r.top+c.ofsY;nL=r.left+c.ofsX;',
+    '          if(c.matchSize){nW=r.width;nH=r.height;}',
+    '        }',
+    '      }',
+    '    }catch(e){}}',
+    '    var st=nT+"_"+nL+"_"+nW+"_"+nH;',
+    '    if(lastSt[id]!==st){b.style.top=nT+"px";b.style.left=nL+"px";',
+    '      if(nW!=="")b.style.width=nW+"px";if(nH!=="")b.style.height=nH+"px";',
+    '      lastSt[id]=st;}',
+    '  });',
+    '  requestAnimationFrame(loop);',
+    '})();',
+    'function wr(f,h){var d=f.contentWindow.document;d.open();d.write(h);d.close();}',
+    'function go(sid){',
+    '  cur=sid;var sd=scenes[sid];',
+    '  document.querySelectorAll(".dtab").forEach(function(t){t.classList.remove("active");});',
+    '  var at=document.getElementById("dt"+sid);if(at)at.classList.add("active");',
+    '  lIf.style.display="none";',
+    '  il.innerHTML=sd.boxesHtml||"";',
+    '  coords=sd.boxAbsCoords?JSON.parse(JSON.stringify(sd.boxAbsCoords)):{};',
+    '  lastSt={};',
+    '  wr(sIf,sd.html||"");sIf.style.display="block";il.style.display="block";',
+    '  gs.style.display="none";sw.style.display="flex";',
+    '  ttl.textContent=sd.title||"";tb.innerHTML=sd.tableHtml||"";',
+    '  rp.style.display="flex";',
+    '  var lp=document.querySelector(".left-pane");if(lp)lp.style.flex="";',
+    '}',
+    'window.switchToScene=go;',
+    'function showOrig(){',
+    '  document.querySelectorAll(".dtab").forEach(function(t){t.classList.remove("active");});',
+    '  ot.classList.add("active");',
+    '  sIf.style.display="none";il.style.display="none";',
+    '  rp.style.display="none";',
+    '  var lp=document.querySelector(".left-pane");if(lp)lp.style.flex="1";',
+    '  lIf.style.display="block";',
+    '  if(origHtml)wr(lIf,origHtml);',
+    '}',
+    'var fid=Object.keys(scenes)[0];',
+    'if(fid)go(fid);else showOrig();',
+    '})();',
+    '<\/script>',
+    '</body></html>'
+  ].join('\n');
+  var blob=new Blob([out],{type:'text/html'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='\uD654\uBA74\uC815\uC758\uC11C_\uBC30\uD3EC\uBCF8.html';
+  a.click();URL.revokeObjectURL(url);
+});
+
+safeEl('mockup-w')&&safeEl('mockup-w').addEventListener('input',()=>{mockup.style.width=safeEl('mockup-w').value+'px';});
+safeEl('mockup-h')&&safeEl('mockup-h').addEventListener('input',()=>{mockup.style.height=safeEl('mockup-h').value+'px';});
 </script>
 </body>
 </html>

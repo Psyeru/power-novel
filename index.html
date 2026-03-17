@@ -123,22 +123,25 @@ button { padding:7px 12px; font-size:12px; font-weight:bold; border:none; border
 .inline-link-chip .lk-del { background:#ef4444; color:#fff; border:none; border-radius:50%; width:14px; height:14px; font-size:9px; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; flex-shrink:0; }
 .inline-link-chip:hover .lk-del { display:flex; }
 .td-link-area { display:flex; flex-wrap:wrap; gap:3px; margin-top:4px; padding-top:3px; border-top:1px dashed #e5e7eb; }
-.red-box       { position:absolute; border:3px solid #d93025; z-index:9999; background:rgba(217,48,37,.05); resize:both; overflow:visible; pointer-events:auto; }
-.highlight-box { position:absolute; border:3px solid #3b82f6; background:rgba(59,130,246,.1); z-index:9999; resize:both; overflow:visible; pointer-events:auto; }
+/* resize:both 는 overflow가 hidden/scroll 일 때만 동작
+   → 박스는 overflow:hidden 으로 복구
+   → 툴바/배지는 position:fixed 로 박스 바깥에 렌더링 */
+.red-box       { position:absolute; border:3px solid #d93025; z-index:9999; background:rgba(217,48,37,.05); resize:both; overflow:hidden; pointer-events:auto; }
+.highlight-box { position:absolute; border:3px solid #3b82f6; background:rgba(59,130,246,.1); z-index:9999; resize:both; overflow:hidden; pointer-events:auto; }
 .text-box      { position:absolute; border:1px dashed #aaa; background:rgba(255,255,255,.9); z-index:9999; resize:both; overflow:hidden; pointer-events:auto; padding:5px; font-size:13px; min-height:30px; }
 .text-box:focus-within { border-color:#4f46e5; }
 /* ── 이미지 오버레이 박스 ── */
-.image-box { position:absolute; z-index:9999; resize:both; overflow:visible; pointer-events:auto; border:2px dashed #10b981; background:transparent; min-width:40px; min-height:40px; }
+.image-box { position:absolute; z-index:9999; resize:both; overflow:hidden; pointer-events:auto; border:2px dashed #10b981; background:transparent; min-width:40px; min-height:40px; }
 .image-box img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
 .image-box:hover { border-color:#059669; }
 .image-box:hover .box-del-btn,.image-box:hover .box-copy-btn { display:block; }
 .image-box .drag-handle { position:absolute; top:-22px; left:0; background:rgba(0,0,0,.6); color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:13px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; opacity:0; transition:.15s; border-radius:3px 3px 0 0; }
 .image-box:hover .drag-handle { opacity:1; }
 /* 배지: 박스 테두리 바깥 좌상단 위로 띄움 */
-/* ★ 배지: 좌상단 숫자만 고정 표시 */
-.red-badge { position:absolute; top:-22px; left:-3px; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; border-radius:3px 3px 0 0; }
-/* ★ 플로팅 툴바: 박스 하단 중앙에 호버 시 표시 */
-.box-toolbar { position:absolute; bottom:-30px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:2px; background:rgba(30,30,30,.92); border-radius:6px; padding:3px 5px; z-index:10002; pointer-events:auto; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.4); }
+/* ★ 배지: overflow:hidden 박스 좌상단에 표시 (박스 안) */
+.red-badge { position:absolute; top:0; left:0; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; border-radius:0 0 4px 0; }
+/* ★ 플로팅 툴바: position:fixed로 박스 바깥에 렌더링 — overflow:hidden 영향 없음 */
+.box-toolbar { position:fixed; display:none; align-items:center; gap:2px; background:rgba(30,30,30,.92); border-radius:6px; padding:3px 5px; z-index:100002; pointer-events:auto; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.4); }
 .toolbar-active .box-toolbar { display:flex; }
 .box-toolbar button { width:22px; height:22px; border:none; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:#fff; display:flex; align-items:center; justify-content:center; padding:0; line-height:1; transition:.1s; }
 .box-toolbar button:hover { filter:brightness(1.25); }
@@ -513,7 +516,11 @@ function syncBoxPositions(){
     }
   });
 }
-(function loop(){syncBoxPositions();requestAnimationFrame(loop);})();
+(function loop(){
+  syncBoxPositions();
+  updateActiveToolbar();
+  requestAnimationFrame(loop);
+})();
 
 safeEl('clear-html-btn')&&safeEl('clear-html-btn').addEventListener('click',()=>{
   safeEl('file-upload').value='';safeEl('html-textarea').value='';
@@ -867,11 +874,29 @@ function buildRow(uid,cnt){
   return `<tr class="spec-title-row"><th>정의</th><td><span class="badge-inline">${cnt}</span><span contenteditable="true" style="border-bottom:1px dashed #d93025;font-weight:800;">기능 제목을 적으세요</span></td><th style="width:82px;padding:4px;"><div class="row-btns"><button class="btn-del-box" onclick="deleteBox('${uid}')">🗑 삭제</button><button class="btn-add-row" onclick="addTableRow('${uid}')">+ 행추가</button><button class="btn-img-attach" onclick="openImgAttach('${uid}')">🖼 이미지</button><button class="btn-link" onclick="openLinkModal('${uid}')">🔗 링크<span class="link-hint">Ctrl+K</span></button></div></th></tr><tr><th><span class="row-drag-handle">⠿</span>01</th><td colspan="2"><div contenteditable="true" style="min-height:20px;">상세 기능 설명을 적으세요.</div></td></tr><tr><th><span class="row-drag-handle">⠿</span>비고</th><td colspan="2"><div contenteditable="true" style="min-height:20px;">비고사항</div></td></tr>`;
 }
 
-// ★ 박스 클릭 시 툴바 표시 — 전역 activeBox 관리
+// ★ 박스 클릭 시 툴바 표시 — position:fixed로 박스 하단에 배치
+// overflow:hidden 박스에서도 툴바가 잘리지 않음
 function setActiveBox(box){
   interLayer.querySelectorAll('.toolbar-active').forEach(b=>b.classList.remove('toolbar-active'));
-  if(box) box.classList.add('toolbar-active');
+  if(!box) return;
+  box.classList.add('toolbar-active');
+  positionToolbar(box);
 }
+function positionToolbar(box){
+  const toolbar = box.querySelector('.box-toolbar');
+  if(!toolbar) return;
+  const r = box.getBoundingClientRect();
+  toolbar.style.top  = (r.bottom + 4) + 'px';
+  toolbar.style.left = (r.left + r.width/2) + 'px';
+  toolbar.style.transform = 'translateX(-50%)';
+}
+// 스크롤/리사이즈 시 툴바 위치 재계산
+function updateActiveToolbar(){
+  const active = interLayer.querySelector('.toolbar-active');
+  if(active) positionToolbar(active);
+}
+mockup.addEventListener('scroll', updateActiveToolbar);
+window.addEventListener('scroll', updateActiveToolbar, true);
 // interaction layer 바깥 클릭 시 툴바 닫기
 document.addEventListener('mousedown',function closeToolbar(e){
   if(interLayer.contains(e.target)) return;
@@ -1376,6 +1401,7 @@ document.addEventListener('mousemove',e=>{
   const newTop=e.clientY-rect.top-dragOfsY;
   draggingBox.style.left=newLeft+'px';
   draggingBox.style.top=newTop+'px';
+  updateActiveToolbar();
 });
 document.addEventListener('mouseup',()=>{
   if(!draggingBox)return;

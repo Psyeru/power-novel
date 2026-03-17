@@ -56,7 +56,7 @@ button { padding:7px 12px; font-size:12px; font-weight:bold; border:none; border
 .clear-file-btn { padding:4px 8px; font-size:11px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer; }
 #live-iframe  { width:100%; height:100%; border:none; display:none; background:#fff; }
 #scene-iframe { width:100%; height:100%; border:none; display:none; background:#fff; }
-#scene-interaction-layer { position:absolute; inset:0; z-index:9998; display:none; pointer-events:none; overflow:hidden; }
+#scene-interaction-layer { position:absolute; inset:0; z-index:9998; display:none; pointer-events:none; overflow:visible; }
 #scene-interaction-layer.drag-active { pointer-events:auto !important; }
 #scene-interaction-layer.boxes-hidden .red-box,
 #scene-interaction-layer.boxes-hidden .highlight-box,
@@ -123,24 +123,25 @@ button { padding:7px 12px; font-size:12px; font-weight:bold; border:none; border
 .inline-link-chip .lk-del { background:#ef4444; color:#fff; border:none; border-radius:50%; width:14px; height:14px; font-size:9px; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; flex-shrink:0; }
 .inline-link-chip:hover .lk-del { display:flex; }
 .td-link-area { display:flex; flex-wrap:wrap; gap:3px; margin-top:4px; padding-top:3px; border-top:1px dashed #e5e7eb; }
-.red-box       { position:absolute; border:3px solid #d93025; z-index:9999; background:rgba(217,48,37,.05); resize:both; overflow:hidden; pointer-events:auto; }
-.highlight-box { position:absolute; border:3px solid #3b82f6; background:rgba(59,130,246,.1); z-index:9999; resize:both; overflow:hidden; pointer-events:auto; }
+.red-box       { position:absolute; border:3px solid #d93025; z-index:9999; background:rgba(217,48,37,.05); resize:both; overflow:visible; pointer-events:auto; }
+.highlight-box { position:absolute; border:3px solid #3b82f6; background:rgba(59,130,246,.1); z-index:9999; resize:both; overflow:visible; pointer-events:auto; }
 .text-box      { position:absolute; border:1px dashed #aaa; background:rgba(255,255,255,.9); z-index:9999; resize:both; overflow:hidden; pointer-events:auto; padding:5px; font-size:13px; min-height:30px; }
 .text-box:focus-within { border-color:#4f46e5; }
 /* ── 이미지 오버레이 박스 ── */
-.image-box { position:absolute; z-index:9999; resize:both; overflow:hidden; pointer-events:auto; border:2px dashed #10b981; background:transparent; min-width:40px; min-height:40px; }
+.image-box { position:absolute; z-index:9999; resize:both; overflow:visible; pointer-events:auto; border:2px dashed #10b981; background:transparent; min-width:40px; min-height:40px; }
 .image-box img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
 .image-box:hover { border-color:#059669; }
 .image-box:hover .box-del-btn,.image-box:hover .box-copy-btn { display:block; }
-.image-box .drag-handle { position:absolute; top:0; left:0; background:rgba(0,0,0,.5); color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:13px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; opacity:0; transition:.15s; }
+.image-box .drag-handle { position:absolute; top:-22px; left:0; background:rgba(0,0,0,.6); color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:13px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; opacity:0; transition:.15s; border-radius:3px 3px 0 0; }
 .image-box:hover .drag-handle { opacity:1; }
-.red-badge   { position:absolute; top:0; left:0; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; }
-/* 배지 페이지 링크 버튼 2개 */
-.badge-link-go  { position:absolute; top:0; left:22px; width:18px; height:18px; background:#8b5cf6; color:#fff; font-size:11px; display:none; align-items:center; justify-content:center; cursor:pointer; z-index:10001; border:none; font-weight:bold; line-height:1; }
-.badge-link-set { position:absolute; top:0; left:40px; width:18px; height:18px; background:#f59e0b; color:#fff; font-size:9px; display:none; align-items:center; justify-content:center; cursor:pointer; z-index:10001; border:none; font-weight:bold; line-height:1; }
+/* 배지: 박스 테두리 바깥 좌상단 위로 띄움 */
+.red-badge   { position:absolute; top:-22px; left:-3px; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; border-radius:3px 3px 0 0; }
+/* 배지 페이지 링크 버튼 2개 — 배지 오른쪽, 동일 높이 */
+.badge-link-go  { position:absolute; top:-22px; left:19px; width:18px; height:18px; background:#aaa; color:#fff; font-size:11px; display:none; align-items:center; justify-content:center; cursor:pointer; z-index:10001; border:none; font-weight:bold; line-height:1; border-radius:3px 3px 0 0; }
+.badge-link-set { position:absolute; top:-22px; left:37px; width:18px; height:18px; background:#f59e0b; color:#fff; font-size:9px; display:none; align-items:center; justify-content:center; cursor:pointer; z-index:10001; border:none; font-weight:bold; line-height:1; border-radius:3px 3px 0 0; }
 .red-box:hover .badge-link-go  { display:flex; }
 .red-box:hover .badge-link-set { display:flex; }
-.badge-link-go.linked  { display:flex !important; }
+.badge-link-go.linked  { background:#8b5cf6; display:flex !important; }
 .badge-link-go:not(.linked) { background:#aaa; }
 /* 배지 링크 모달 */
 #badge-link-modal { border:2px solid #f59e0b; min-width:280px; }
@@ -152,12 +153,13 @@ button { padding:7px 12px; font-size:12px; font-weight:bold; border:none; border
 .btn-blk-ok  { background:#f59e0b; color:#fff; }
 .btn-blk-clr { background:#fee2e2; color:#ef4444; border:1px solid #fca5a5; }
 .btn-blk-no  { background:#e5e7eb; color:#333; }
-.drag-handle { position:absolute; top:0; left:0; background:#555; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:13px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; }
+.drag-handle { position:absolute; top:-22px; left:0; background:#555; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:13px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; border-radius:3px 3px 0 0; }
 .red-badge:active,.drag-handle:active { cursor:grabbing; }
-.box-del-btn  { position:absolute; top:0; right:0; width:18px; height:18px; background:#ef4444; color:#fff; text-align:center; line-height:18px; font-size:10px; cursor:pointer; display:none; font-weight:bold; z-index:10001; border-radius:0; }
-.box-copy-btn { position:absolute; top:0; right:20px; width:18px; height:18px; background:#3b82f6; color:#fff; text-align:center; line-height:18px; font-size:10px; cursor:pointer; display:none; font-weight:bold; z-index:10001; border-radius:0; }
-.red-box:hover .box-del-btn,.highlight-box:hover .box-del-btn,.text-box:hover .box-del-btn { display:block; }
-.red-box:hover .box-copy-btn,.highlight-box:hover .box-copy-btn,.text-box:hover .box-copy-btn { display:block; }
+/* 삭제/복사 버튼: 박스 우상단 바깥으로 */
+.box-del-btn  { position:absolute; top:-22px; right:-3px; width:18px; height:18px; background:#ef4444; color:#fff; text-align:center; line-height:18px; font-size:10px; cursor:pointer; display:none; font-weight:bold; z-index:10001; border-radius:3px 3px 0 0; }
+.box-copy-btn { position:absolute; top:-22px; right:15px; width:18px; height:18px; background:#3b82f6; color:#fff; text-align:center; line-height:18px; font-size:10px; cursor:pointer; display:none; font-weight:bold; z-index:10001; border-radius:3px 3px 0 0; }
+.red-box:hover .box-del-btn,.highlight-box:hover .box-del-btn,.text-box:hover .box-del-btn,.image-box:hover .box-del-btn { display:block; }
+.red-box:hover .box-copy-btn,.highlight-box:hover .box-copy-btn,.text-box:hover .box-copy-btn,.image-box:hover .box-copy-btn { display:block; }
 .badge-inline { display:inline-block; background:#d93025; color:#fff; border-radius:50%; width:18px; height:18px; text-align:center; line-height:18px; font-size:10px; margin-right:5px; vertical-align:middle; flex-shrink:0; }
 [contenteditable="true"] { outline:none; cursor:text; color:#222; }
 [contenteditable="true"]:hover { background:rgba(0,0,0,.05); cursor:text; border-radius:3px; }
@@ -1414,7 +1416,7 @@ safeEl('exp-html-btn')&&safeEl('exp-html-btn').addEventListener('click',function
     '<div class="left-pane"><div id="app-mockup">',
     '<iframe id="live-iframe" style="width:100%;height:100%;border:none;display:none;"></iframe>',
     '<iframe id="scene-iframe" style="width:100%;height:100%;border:none;display:none;"></iframe>',
-    '<div id="scene-interaction-layer" style="position:absolute;inset:0;z-index:9998;display:none;pointer-events:none;overflow:hidden;"></div>',
+    '<div id="scene-interaction-layer" style="position:absolute;inset:0;z-index:9998;display:none;pointer-events:none;overflow:visible;"></div>',
     '</div></div>',
     '<div class="right-pane" id="rp">',
     '<div class="guide-screen" id="gs"><h3>\uD398\uC774\uC9C0\uB97C \uC120\uD0DD\uD558\uC138\uC694</h3></div>',

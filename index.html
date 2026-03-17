@@ -139,7 +139,7 @@ button { padding:7px 12px; font-size:12px; font-weight:bold; border:none; border
 .image-box:hover .drag-handle { opacity:1; }
 /* 배지: 박스 테두리 바깥 좌상단 위로 띄움 */
 /* ★ 배지: overflow:hidden 박스 좌상단에 표시 (박스 안) */
-.red-badge { position:fixed; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:100001; user-select:none; border-radius:4px 0 4px 0; }
+.red-badge { position:absolute; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:100001; user-select:none; border-radius:4px 0 4px 0; }
 /* ★ 플로팅 툴바: position:fixed로 박스 바깥에 렌더링 — overflow:hidden 영향 없음 */
 .box-toolbar { position:fixed; display:none; align-items:center; gap:2px; background:rgba(30,30,30,.92); border-radius:6px; padding:3px 5px; z-index:100002; pointer-events:auto; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.4); }
 .toolbar-active .box-toolbar { display:flex; }
@@ -634,8 +634,11 @@ window.switchToScene=function(sceneId){
   interLayer.innerHTML=sd.boxesHtml||'';
   interLayer.style.display='block';
   interLayer.classList.remove('boxes-hidden');
+  lastBoxStates={};
   const tbBtn=safeEl('toggle-boxes-btn');
   if(tbBtn){tbBtn.innerText='👁 박스 숨기기';tbBtn.classList.remove('hidden-mode');}
+  // 배지 위치 즉시 초기 배치
+  updateBadgePositions();
   setTimeout(syncBoxPositions,80);setTimeout(syncBoxPositions,350);
   setTimeout(restoreBadgeLinkButtons,100);
   guideScreen.style.display='none';specWrap.style.display='flex';
@@ -827,7 +830,12 @@ function addShape(toolType,absTop,absLeft,width,height,path=null,ofsX=0,ofsY=0,m
   if(toolType==='number-box'||toolType==='auto-box'){
     const cnt=interLayer.querySelectorAll('.red-box').length+1;
     box.className='red-box';
-    box.innerHTML=`<div class="red-badge" data-box-id="${uid}">${cnt}</div><div class="box-toolbar"><button class="tb-drag" data-action="drag" data-box-id="${uid}" title="이동">✥</button><button class="tb-go" data-action="badge-go" data-box-id="${uid}" title="페이지 이동">↗</button><button class="tb-set" data-action="badge-link" data-box-id="${uid}" title="이동 페이지 설정">⚙</button><button class="tb-copy" data-action="copy" data-box-id="${uid}" title="복사">⧉</button><button class="tb-del" data-action="del" data-box-id="${uid}" title="삭제">✖</button></div>`;
+    box.innerHTML=`<div class="box-toolbar"><button class="tb-drag" data-action="drag" data-box-id="${uid}" title="이동">✥</button><button class="tb-go" data-action="badge-go" data-box-id="${uid}" title="페이지 이동">↗</button><button class="tb-set" data-action="badge-link" data-box-id="${uid}" title="이동 페이지 설정">⚙</button><button class="tb-copy" data-action="copy" data-box-id="${uid}" title="복사">⧉</button><button class="tb-del" data-action="del" data-box-id="${uid}" title="삭제">✖</button></div>`;
+    // 배지를 interLayer 직속으로 — overflow:hidden 박스 밖에 렌더링
+    const badge=document.createElement('div');
+    badge.className='red-badge'; badge.dataset.boxId=uid; badge.textContent=cnt;
+    badge.id='badge-'+uid;
+    interLayer.appendChild(badge);
     const tbody=document.createElement('tbody');
     tbody.id='row-'+uid;
     tbody.innerHTML=buildRow(uid,cnt);
@@ -892,14 +900,16 @@ function positionToolbar(box){
     toolbar.style.transform = 'translateX(-50%)';
   }
 }
-// 배지 위치를 박스 좌상단 바깥에 고정 (rAF마다 갱신)
+// 배지 위치: 박스 left/top 기준으로 interLayer 내 절대좌표 계산
 function updateBadgePositions(){
-  interLayer.querySelectorAll('.red-box').forEach(box=>{
-    const badge = box.querySelector('.red-badge');
-    if(!badge) return;
-    const r = box.getBoundingClientRect();
-    badge.style.top  = r.top + 'px';
-    badge.style.left = r.left + 'px';
+  interLayer.querySelectorAll('.red-badge[data-box-id]').forEach(badge=>{
+    const bid = badge.dataset.boxId;
+    const box = safeEl('box-'+bid);
+    if(!box) return;
+    const bl = parseFloat(box.style.left)||0;
+    const bt = parseFloat(box.style.top)||0;
+    badge.style.left = (bl - 22) + 'px';  // 박스 왼쪽 바깥
+    badge.style.top  = (bt - 3) + 'px';   // 박스 위쪽에 살짝 걸침
   });
 }
 // 스크롤/리사이즈 시 툴바 위치 재계산
@@ -1059,6 +1069,7 @@ addOverlay.addEventListener('click',e=>{
 
 window.deleteBox=function(boxId){
   const box=safeEl('box-'+boxId);if(box)box.remove();
+  const badge=safeEl('badge-'+boxId);if(badge)badge.remove();
   const row=safeEl('row-'+boxId);if(row)row.remove();
   delete boxAbsCoords[boxId];saveState();
 };
@@ -1233,9 +1244,10 @@ function openRenumberPanel(){
     const row=safeEl('row-'+bid);
     let title='(제목 없음)';
     if(row){const sp=row.querySelector('.spec-title-row td span[contenteditable]');if(sp)title=sp.innerText||title;}
+    const realNum=(safeEl('badge-'+bid)||{}).innerText||(i+1);
     const li=document.createElement('li');
     li.setAttribute('draggable','true');li.dataset.boxId=box.id;
-    li.innerHTML=`<span class="num-badge">${i+1}</span><span>${title}</span>`;
+    li.innerHTML=`<span class="num-badge">${realNum}</span><span>${title}</span>`;
     list.appendChild(li);
   });
   let dlLi=null;
@@ -1257,8 +1269,8 @@ window.closeRenumberPanel=function(){safeEl('renumber-overlay').style.display='n
 window.applyRenumber=function(){
   safeEl('renumber-list').querySelectorAll('li').forEach((li,idx)=>{
     const box=safeEl(li.dataset.boxId);if(!box)return;
-    const rb=box.querySelector('.red-badge');if(rb)rb.innerText=idx+1;
     const bid=li.dataset.boxId.replace('box-','');
+    const rb=safeEl('badge-'+bid);if(rb)rb.innerText=idx+1;
     const row=safeEl('row-'+bid);
     if(row){const ib=row.querySelector('.badge-inline');if(ib)ib.innerText=idx+1;interLayer.appendChild(box);tableBody.appendChild(row);}
   });
@@ -1385,7 +1397,7 @@ function restoreBadgeLinkButtons(){
     const c=boxAbsCoords[bid];
     if(c&&c.targetScene&&scenes[c.targetScene]){
       btn.classList.add('linked');
-      btn.title=`→ ${scenes[c.targetScene].title}`;
+      btn.title='→ '+(scenes[c.targetScene].title||bid);
     }else{
       btn.classList.remove('linked');
       btn.title='페이지 이동';

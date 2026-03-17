@@ -139,7 +139,7 @@ button { padding:7px 12px; font-size:12px; font-weight:bold; border:none; border
 .image-box:hover .drag-handle { opacity:1; }
 /* 배지: 박스 테두리 바깥 좌상단 위로 띄움 */
 /* ★ 배지: overflow:hidden 박스 좌상단에 표시 (박스 안) */
-.red-badge { position:absolute; top:0; left:0; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:10; user-select:none; border-radius:0 0 4px 0; }
+.red-badge { position:fixed; background:#d93025; color:#fff; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; pointer-events:auto; cursor:grab; z-index:100001; user-select:none; border-radius:4px 0 4px 0; }
 /* ★ 플로팅 툴바: position:fixed로 박스 바깥에 렌더링 — overflow:hidden 영향 없음 */
 .box-toolbar { position:fixed; display:none; align-items:center; gap:2px; background:rgba(30,30,30,.92); border-radius:6px; padding:3px 5px; z-index:100002; pointer-events:auto; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.4); }
 .toolbar-active .box-toolbar { display:flex; }
@@ -519,6 +519,7 @@ function syncBoxPositions(){
 (function loop(){
   syncBoxPositions();
   updateActiveToolbar();
+  updateBadgePositions();
   requestAnimationFrame(loop);
 })();
 
@@ -884,11 +885,22 @@ function setActiveBox(box){
 }
 function positionToolbar(box){
   const toolbar = box.querySelector('.box-toolbar');
-  if(!toolbar) return;
-  const r = box.getBoundingClientRect();
-  toolbar.style.top  = (r.bottom + 4) + 'px';
-  toolbar.style.left = (r.left + r.width/2) + 'px';
-  toolbar.style.transform = 'translateX(-50%)';
+  if(toolbar){
+    const r = box.getBoundingClientRect();
+    toolbar.style.top  = (r.bottom + 4) + 'px';
+    toolbar.style.left = (r.left + r.width/2) + 'px';
+    toolbar.style.transform = 'translateX(-50%)';
+  }
+}
+// 배지 위치를 박스 좌상단 바깥에 고정 (rAF마다 갱신)
+function updateBadgePositions(){
+  interLayer.querySelectorAll('.red-box').forEach(box=>{
+    const badge = box.querySelector('.red-badge');
+    if(!badge) return;
+    const r = box.getBoundingClientRect();
+    badge.style.top  = r.top + 'px';
+    badge.style.left = r.left + 'px';
+  });
 }
 // 스크롤/리사이즈 시 툴바 위치 재계산
 function updateActiveToolbar(){

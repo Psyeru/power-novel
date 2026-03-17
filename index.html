@@ -900,7 +900,7 @@ function positionToolbar(box){
     toolbar.style.transform = 'translateX(-50%)';
   }
 }
-// 배지 위치: 박스 left/top 기준으로 interLayer 내 절대좌표 계산
+// 배지 위치: 박스 좌상단 바깥에 고정
 function updateBadgePositions(){
   interLayer.querySelectorAll('.red-badge[data-box-id]').forEach(badge=>{
     const bid = badge.dataset.boxId;
@@ -908,8 +908,8 @@ function updateBadgePositions(){
     if(!box) return;
     const bl = parseFloat(box.style.left)||0;
     const bt = parseFloat(box.style.top)||0;
-    badge.style.left = (bl - 22) + 'px';  // 박스 왼쪽 바깥
-    badge.style.top  = (bt - 3) + 'px';   // 박스 위쪽에 살짝 걸침
+    badge.style.left = bl + 'px';       // 박스 왼쪽에 딱 맞춤
+    badge.style.top  = (bt - 22) + 'px'; // 박스 위쪽 바깥으로
   });
 }
 // 스크롤/리사이즈 시 툴바 위치 재계산
